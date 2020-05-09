@@ -5,7 +5,7 @@ main.o : main.c ssu_mntr.h
 	gcc -c main.c
 
 ssu_mntr.o : ssu_mntr.c ssu_mntr.h logger.h
-	gcc -c ssu_mntr.c
+	gcc -c ssu_mntr.c -D DEBUG
 
 logger.o : logger.c logger.h
 	gcc -c logger.c
