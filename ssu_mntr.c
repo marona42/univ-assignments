@@ -57,11 +57,11 @@ int do_help(int pargc, char *pargv[ARGNUM])
 {
     printf("Prompt Usages :\t(lowercase commands are OK)\n");
     printf("DELETE <FILENAME> [END_TIME] [OPTION]: deletes <FILENAME> by moving into 'trash' directory.\n");
-    printf("\tEND_TIME : reserve the time when <FILENAME> deleted.\n\tOPTION :\n\t\t-i : removes <FILENAME> without using 'trash' directory\n\t\t-r : confirm deleting action when [END_TIME] arrives\n");
-    printf("size <FILENAME> [OPTION]: prints <FILENAME>'s size with relative directory\n");
-    printf("\tOPTION :\n\t\t-d NUMBER : print <FILENAME>'s subdirectory of depth NUMBER\n");
+    printf("\tEND_TIME : reserve the time when <FILENAME> deleted.\n\tOPTION:\n\t\t-i : removes <FILENAME> without using 'trash' directory\n\t\t-r : confirm deleting action when [END_TIME] arrives\n");
+    printf("SIZE <FILENAME> [OPTION]: prints <FILENAME>'s size with relative directory\n");
+    printf("\tOPTION:\n\t\t-d NUMBER : print <FILENAME>'s subdirectory of depth NUMBER\n");
     printf("RECOVER <FILENAME> [OPTION]: recover <FILENAME> from 'trash' directory.\n");
-    printf("\tOPTION :\n\t\t-l : list 'trash' directory sorted with deleted time\n");
+    printf("\tOPTION:\n\t\t-l : list 'trash' directory sorted with deleted time\n");
     printf("TREE: prints 'check' directory by tree foam.\n");
     printf("EXIT: exits this program containing monitoring process.\n");
     printf("HELP: prints prompt usage.\n");
