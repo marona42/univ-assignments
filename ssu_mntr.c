@@ -3,20 +3,26 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <ctype.h>
 #include "ssu_mntr.h"
 #include "logger.h"
 
+pid_t pid;
 char *pargv[ARGNUM], prmptinput[BUFSIZE];
 
 void ssu_mntr(int argc, char *argv[])
 {
+
+    if ((pid = fork()) < 0)
+        { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
+    else if (pid == 0)
+        if (logger_daemon_init() < 0)
+            { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
+    
     int pargc;
     int i,spacechk;
     char *ptok;
-//    if (logger_daemon_init() < 0)
-//    { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
-
     while(1)
     {
         printf("%d>",SNUMBER);
@@ -52,7 +58,12 @@ int do_delete(int pargc, char *pargv[ARGNUM]){}
 int do_size(int pargc, char *pargv[ARGNUM]){}
 int do_recover(int pargc, char *pargv[ARGNUM]){}
 int do_tree(int pargc, char *pargv[ARGNUM]){}
-int do_exit(int pargc, char *pargv[ARGNUM]){}
+int do_exit(int pargc, char *pargv[ARGNUM])
+{
+    printf("Prompt exited!\nplease kill daemon : ps -efj | grep [THISNAME]\n");
+    //kill(dpid,SIGTERM);   //명세 변경
+    exit(0);
+}
 int do_help(int pargc, char *pargv[ARGNUM])
 {
     printf("Prompt Usages :\t(lowercase commands are OK)\n");
