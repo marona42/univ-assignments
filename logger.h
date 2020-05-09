@@ -1,0 +1,1 @@
+int logger_daemon_init(void);
