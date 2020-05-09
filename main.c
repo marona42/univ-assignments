@@ -31,5 +31,5 @@ void ssu_runtime(struct timeval *begin_t, struct timeval *end_t)
 	}
 
 	end_t->tv_usec -= begin_t->tv_usec;		//마이크로초 뺄셈 연산
-	printf("%s exited.\nRuntime: %ld:%06ld(sec:usec)\n",argv[0], end_t->tv_sec, end_t->tv_usec);	//마이크로초의 경우, leading zero포함해 6자리 고정포맷.
+	printf("Runtime: %ld:%06ld(sec:usec)\n", end_t->tv_sec, end_t->tv_usec);	//마이크로초의 경우, leading zero포함해 6자리 고정포맷.
 }
