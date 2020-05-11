@@ -108,7 +108,6 @@ int remove_all(const char *path)    //재귀적으로 remove
 }
 int do_delete(int pargc, char *pargv[ARGNUM])
 {
-    //TODO: END_TIME
     struct stat stbuf;
     char newpath[PATH_MAX],oldpath[PATH_MAX],*filename,infopath[PATH_MAX],timememo[BUFSIZE];
     FILE *infop;
@@ -131,7 +130,7 @@ int do_delete(int pargc, char *pargv[ARGNUM])
     if(strstr(oldpath,monitorpath) == NULL) //모니터링 디렉토리를 벗어난 경로의 경우 에러처리
     { fprintf(stderr,"%s is not in %s!\n",pargv[1],monitorpath); return -3; }
 
-    ///[END_TIME] 처리
+    ///TODO:[END_TIME] 처리
 
     while((c = getopt(pargc,pargv,"ir"))!= -1)  //getopt가 pargv의 순서를 바꿔놓으므로, [FILENAME]과 [END_TIME]처리를 먼저 해야한다.
     {
@@ -144,10 +143,9 @@ int do_delete(int pargc, char *pargv[ARGNUM])
     }optind=0;  //인자처리 초기화
 
     ///삭제액션
-    //FIXME: 디렉토리 삭제시 디렉토리와 내부파일 삭제액션 : 현재로도 info는 만들어진다.
+    //TODO:end_time, r옵션
     if(iOption)
     {
-        
         if(remove_all(oldpath)<0)
         { fprintf(stderr, "Error : remove failed\n");   return -4; }
         else
@@ -180,19 +178,25 @@ int do_delete(int pargc, char *pargv[ARGNUM])
         fprintf(infop,"%s\n",timememo);   //변경시간(mtime)
         fclose(infop);
         rename_all(oldpath,newpath);   //move into trash
+        //TODO: INFO크기 제한
     }
 }
 int do_size(int pargc, char *pargv[ARGNUM])
 {
-
+    //TODO: 기본동작 :  상대경로(programpath), 크기
+    //TODO: -d옵션  :하위 디렉토리 깊이
 }
 int do_recover(int pargc, char *pargv[ARGNUM])
 {
+    //TODO: 기본동작 : 파일 복구
+        //TODO: 동일한 이름 파일 선택
+        //TODO: 동일한 이름 파일 복구시 숫자_ 추가
+    //TODO: -l 옵션 : 삭제시간 오래된 순으로 출력후 진행
 
 }
 int do_tree(int pargc, char *pargv[ARGNUM])
 {
-
+    //TODO: 기본동작 : 디렉토리 구조 보여주기
 }
 int do_exit(int pargc, char *pargv[ARGNUM])
 {
