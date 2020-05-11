@@ -4,22 +4,25 @@
 #include <string.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <time.h>
 #include <ctype.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "ssu_mntr.h"
 #include "logger.h"
 
 pid_t pid;
-char *pargv[ARGNUM], prmptinput[BUFSIZE];
+char *pargv[ARGNUM], prmptinput[BUFSIZE], workingpath[PATH_MAX];
 
 void ssu_mntr(int argc, char *argv[])
 {
 
-    if ((pid = fork()) < 0)
-        { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
-    else if (pid == 0)
-        if (logger_daemon_init() < 0)
-            { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
-    
+//    if ((pid = fork()) < 0)
+//        { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
+//    else if (pid == 0)
+//        if (logger_daemon_init() < 0)         //모니터링 디몬 만들기
+//            { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
+
     int pargc;
     int i,spacechk;
     char *ptok;
@@ -54,10 +57,71 @@ int do_prmpt(int pargc,char *pargv[ARGNUM])
     else do_help(pargc,pargv);                                      //이외 다른 입력에 대해 전부 help 실행.
     return 0;
 }
-int do_delete(int pargc, char *pargv[ARGNUM]){}
-int do_size(int pargc, char *pargv[ARGNUM]){}
-int do_recover(int pargc, char *pargv[ARGNUM]){}
-int do_tree(int pargc, char *pargv[ARGNUM]){}
+int do_delete(int pargc, char *pargv[ARGNUM])
+{
+    //TODO: 옵션처리
+    struct stat stbuf;
+    char newpath[PATH_MAX],oldpath[PATH_MAX],*filename,infopath[PATH_MAX],timememo[BUFSIZE];
+    FILE *infop;
+    time_t timenow;
+    int i,c,iOption=false,rOption=false;
+
+    while((c = getopt(pargc,pargv,"ir"))!=1)
+    {
+        switch(c)
+        {
+            case 'i':
+            case 'r':
+        }
+    }
+
+    getcwd(workingpath,PATH_MAX);
+    if(lstat("trash",&stbuf) < 0)       //trash가 없다면
+    {
+        if(mkdir("trash",0777) < 0)     //생성
+        { fprintf(stderr,"failed to make 'trash' directory\n"); return -1;}
+        if(mkdir("trash/files",0777) < 0)     //생성
+        { fprintf(stderr,"failed to make 'trash/files' directory\n"); return -1;}
+        if(mkdir("trash/info",0777) < 0)     //생성
+        { fprintf(stderr,"failed to make 'trash/info' directory\n"); return -1;}
+        
+    }
+    else if (!S_ISDIR(stbuf.st_mode))   //있는데 디렉토리가 아니라면?
+    { fprintf(stderr,"'trash' is not a directory!\n"); return -2;}
+
+    if(pargv[1][0]!='/')   //주어진 경로가 절대경로가 아닌 경우
+        realpath(pargv[1],oldpath); //상대경로를 절대경로
+    else
+        strcpy(oldpath,pargv[1]);   //절대경로인 경우 복사만
+
+    filename=strrchr(oldpath,'/')+1;    //파일이름 시작지점 포인터
+    if(lstat(oldpath,&stbuf) < 0)  //[FILENAME] 확인
+    { fprintf(stderr, "%s is not exist!\n",pargv[1]); return -3; }
+
+    sprintf(newpath,"%s/trash/files/%s^%lu.deleted",workingpath,filename,stbuf.st_ino);    //newpath에 trash/files 디렉토리 경로를 넣는다. + 삭제태그로 ino값과 .deleted를 붙여준다.
+    sprintf(infopath,"%s/trash/info/%s^%lu.deleted",workingpath,filename,stbuf.st_ino);    //infopath에 trash/info 디렉토리 경로를 넣는다. + 삭제태그로 ino값과 .deleted를 붙여준다.
+    
+    infop = fopen(infopath,"w");
+    time(&timenow);
+    strftime(timememo,BUFSIZE,"%Y-%m-%d %H:%M:%S",localtime(&timenow));
+    fprintf(infop,"[Trash info]\n%s\n%s\n",oldpath,timememo);   //예전 절대경로/삭제 시간/
+    strftime(timememo,BUFSIZE,"%Y-%m-%d %H:%M:%S",localtime(&stbuf.st_mtime));
+    fprintf(infop,"%s\n",timememo);   //변경시간(mtime)
+    fclose(infop);
+    rename(oldpath,newpath);   //move into trash
+}
+int do_size(int pargc, char *pargv[ARGNUM])
+{
+
+}
+int do_recover(int pargc, char *pargv[ARGNUM])
+{
+
+}
+int do_tree(int pargc, char *pargv[ARGNUM])
+{
+
+}
 int do_exit(int pargc, char *pargv[ARGNUM])
 {
     printf("Prompt exited!\nplease kill daemon : ps -efj | grep [THISNAME]\n");

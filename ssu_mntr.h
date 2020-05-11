@@ -1,4 +1,14 @@
+
+#ifndef true
+	#define true 1
+#endif
+#ifndef false
+	#define false 0
+#endif
 #define BUFSIZE 256
+#ifndef PATH_MAX
+    #define PATH_MAX 1024
+#endif
 #define ARGNUM 6
 #define SNUMBER 20162447
 void ssu_mntr(int argc, char *argv[]);
