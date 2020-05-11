@@ -78,6 +78,8 @@ int do_delete(int pargc, char *pargv[ARGNUM])
 
     if(lstat(oldpath,&stbuf) < 0)  //[FILENAME] 확인
     { fprintf(stderr, "%s is not exist!\n",pargv[1]); return -3; }
+    if(strcmp(oldpath,monitorpath) == 0)
+    { fprintf(stderr, "%s is monitored directory!\n",pargv[1]); return -3; }
     if(strstr(oldpath,monitorpath) == NULL) //모니터링 디렉토리를 벗어난 경로의 경우 에러처리
     { fprintf(stderr,"%s is not in %s!\n",pargv[1],monitorpath); return -3; }
 
@@ -94,8 +96,7 @@ int do_delete(int pargc, char *pargv[ARGNUM])
     }optind=0;  //인자처리 초기화
 
     ///삭제액션
-    //FIXME: 디렉토리 삭제시...?
-    //FIXME: 모니터 디렉토리 자체를 삭제?!
+    //FIXME: 디렉토리 삭제시 디렉토리와 내부파일 삭제액션 : 현재로도 info는 만들어진다.
     if(iOption)
     {
         
