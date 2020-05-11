@@ -11,6 +11,10 @@
 #endif
 #define ARGNUM 6
 #define SNUMBER 20162447
+#define MNTRDIR "watching"
+
+extern char programpath[PATH_MAX],monitorpath[PATH_MAX];
+
 void ssu_mntr(int argc, char *argv[]);
 int do_prmpt(int pargc, char *pargv[]);
 int do_delete(int pargc, char *pargv[ARGNUM]);
