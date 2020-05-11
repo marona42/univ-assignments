@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <signal.h>
 #include <time.h>
 #include <ctype.h>
@@ -58,6 +59,53 @@ int do_prmpt(int pargc,char *pargv[ARGNUM])
     else do_help(pargc,pargv);                                      //이외 다른 입력에 대해 전부 help 실행.
     return 0;
 }
+int rename_all(const char *srcpath,const char *destpath)    //재귀적으로 remove
+{
+    printf("rename %s -> %s\n",srcpath,destpath);
+    struct stat statbuf;
+    struct dirent **items;
+    int itemnum,i;
+    char itempath[PATH_MAX],nitempath[PATH_MAX];
+    lstat(srcpath,&statbuf);
+    if(S_ISDIR(statbuf.st_mode))
+    {
+        mkdir(destpath,0777);
+        itemnum = scandir(srcpath,&items,NULL,NULL);
+        for(i=0;i<itemnum;i++)
+        {
+            if(!strcmp(items[i]->d_name,".") || !strcmp(items[i]->d_name,"..")) continue;
+            sprintf(itempath,"%s/%s",srcpath,items[i]->d_name);
+            sprintf(nitempath,"%s/%s",destpath,items[i]->d_name);
+            rename_all(itempath,nitempath);
+            free(items[i]);
+        }
+        free(items);
+        rmdir(srcpath);
+    }
+    else
+        return rename(srcpath,destpath);
+}
+int remove_all(const char *path)    //재귀적으로 remove
+{
+    struct stat statbuf;
+    struct dirent **items;
+    int itemnum,i;
+    char itempath[PATH_MAX];
+    lstat(path,&statbuf);
+    if(S_ISDIR(statbuf.st_mode))
+    {
+        itemnum = scandir(path,&items,NULL,NULL);
+        for(i=0;i<itemnum;i++)
+        {
+            if(!strcmp(items[i]->d_name,".") || !strcmp(items[i]->d_name,"..")) continue;
+            sprintf(itempath,"%s/%s",path,items[i]->d_name);
+            remove_all(itempath);
+            free(items[i]);
+        }
+        free(items);
+    }
+    return remove(path);
+}
 int do_delete(int pargc, char *pargv[ARGNUM])
 {
     //TODO: END_TIME
@@ -100,7 +148,7 @@ int do_delete(int pargc, char *pargv[ARGNUM])
     if(iOption)
     {
         
-        if(remove(oldpath)<0)
+        if(remove_all(oldpath)<0)
         { fprintf(stderr, "Error : remove failed\n");   return -4; }
         else
         { printf("removed successfully\n");    return 0;}
@@ -122,7 +170,8 @@ int do_delete(int pargc, char *pargv[ARGNUM])
 
         sprintf(newpath,"%s/trash/files/%s^%lu.deleted",programpath,filename,stbuf.st_ino);    //newpath에 trash/files 디렉토리 경로를 넣는다. + 삭제태그로 ino값과 .deleted를 붙여준다.
         sprintf(infopath,"%s/trash/info/%s^%lu.deleted",programpath,filename,stbuf.st_ino);    //infopath에 trash/info 디렉토리 경로를 넣는다. + 삭제태그로 ino값과 .deleted를 붙여준다.
-        
+
+        ///삭제 액션
         infop = fopen(infopath,"w");
         time(&timenow);
         strftime(timememo,BUFSIZE,"%Y-%m-%d %H:%M:%S",localtime(&timenow));
@@ -130,7 +179,7 @@ int do_delete(int pargc, char *pargv[ARGNUM])
         strftime(timememo,BUFSIZE,"%Y-%m-%d %H:%M:%S",localtime(&stbuf.st_mtime));
         fprintf(infop,"%s\n",timememo);   //변경시간(mtime)
         fclose(infop);
-        rename(oldpath,newpath);   //move into trash
+        rename_all(oldpath,newpath);   //move into trash
     }
 }
 int do_size(int pargc, char *pargv[ARGNUM])
