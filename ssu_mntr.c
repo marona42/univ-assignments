@@ -27,13 +27,16 @@ void ssu_mntr(int argc, char *argv[])
     if ((pid = fork()) < 0)
         { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
     else if (pid == 0)
-        if (logger_daemon_init(programpath) < 0)         //모니터링 디몬 만들기
-            { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
-        else
         {
+            if (logger_daemon_init(programpath) < 0)         //모니터링 디몬 만들기
+                { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
             init_monitoring(monitorpath);
             while(1)
+            {
+                printf("*heartbeat*\n");
                 do_monitor(monitorpath);
+                sleep(1);
+            }
         }
     int pargc;
     int i,spacechk;
