@@ -24,12 +24,17 @@ void ssu_mntr(int argc, char *argv[])
 {
     getcwd(programpath,PATH_MAX);                           //프로그램 경로를 저장
     sprintf(monitorpath,"%s/%s",programpath,MNTRDIR);    //모니터링 디렉토리 경로를 저장
-    //if ((pid = fork()) < 0)
-    //    { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
-    //else if (pid == 0)
-    //    if (logger_daemon_init() < 0)         //모니터링 디몬 만들기
-    //        { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
-
+    if ((pid = fork()) < 0)
+        { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
+    else if (pid == 0)
+        if (logger_daemon_init(programpath) < 0)         //모니터링 디몬 만들기
+            { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
+        else
+        {
+            init_monitoring(monitorpath);
+            while(1)
+                do_monitor(monitorpath);
+        }
     int pargc;
     int i,spacechk;
     char *ptok;
@@ -45,7 +50,7 @@ void ssu_mntr(int argc, char *argv[])
             ptok=strtok(NULL," ");
         }
         if(pargc)                   //엔터만 눌렀을 땐 프롬프트 재출력
-            do_prmpt(pargc,pargv);
+            if(do_prmpt(pargc,pargv)<0) break;
     }
 }
 int do_prmpt(int pargc,char *pargv[ARGNUM])
@@ -61,12 +66,16 @@ int do_prmpt(int pargc,char *pargv[ARGNUM])
     else if (strcmp("size",pargv[0]) == 0) do_size(pargc,pargv);
     else if (strcmp("recover",pargv[0]) == 0) do_recover(pargc,pargv);
     else if (strcmp("tree",pargv[0]) == 0) do_tree(pargc,pargv);
-    else if (strcmp("exit",pargv[0]) == 0) do_exit(pargc,pargv);
+    else if (strcmp("exit",pargv[0]) == 0)
+    {
+        printf("Prompt exited!\nplease kill daemon : ps -efj | grep []\n");
+        //kill(dpid,SIGTERM);   //명세 변경
+        return -1;
+    }
     else do_help(pargc,pargv);                                      //이외 다른 입력에 대해 전부 help 실행.
     return 0;
 }
-int dotfilter(const struct dirent *ent) //scandir시 ., .. 제외
-{ return strcmp(ent->d_name,".") && strcmp(ent->d_name,".."); }
+
 time_t getdtime(const char *fname)
 {
     FILE *ap;
@@ -443,7 +452,7 @@ int getname(const char *path, char *name)   //^ 뒤를 떼서 파일 이름만 �
     strncpy(name,path,end-path);
     name[end-path]='\0';
 }
-void getpath(const char *path, char *name)   //^ 뒤를 떼서 파일 이름만 가져오기
+void getpath(const char *path, char *name)   //path의 파일에서 path 가져오기
 {
     FILE *ap;
     ap = fopen(path,"r");
@@ -676,12 +685,6 @@ int do_tree(int pargc, char *pargv[ARGNUM])
     }
 
     chdir(programpath);
-}
-int do_exit(int pargc, char *pargv[ARGNUM])
-{
-    printf("Prompt exited!\nplease kill daemon : ps -efj | grep [THISNAME]\n");
-    //kill(dpid,SIGTERM);   //명세 변경
-    exit(0);
 }
 int do_help(int pargc, char *pargv[ARGNUM])
 {
