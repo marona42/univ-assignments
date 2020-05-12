@@ -342,7 +342,7 @@ int do_size(int pargc, char *pargv[ARGNUM])
 {
     struct stat stbuf;
     struct dirent **items;
-    char newpath[PATH_MAX],oldpath[PATH_MAX],itempath[PATH_MAX],*filename,*pch;
+    char newpath[PATH_MAX],oldpath[PATH_MAX],itempath[PATH_MAX],*pch;
     int i,dOption=1,fsize=-1,itemnum,c;
     
     if(pargc < 2)
@@ -426,9 +426,75 @@ int do_recover(int pargc, char *pargv[ARGNUM])
     //TODO: -l 옵션 : 삭제시간 오래된 순으로 출력후 진행
 
 }
+void print_tree(const char *curpath,const char *fname,int curdepth,int peod,int eod)
+{
+    struct stat stbuf;
+    struct dirent **items;
+    char itempath[PATH_MAX];
+    int i,itemnum;
+    for(i=0;i<curdepth-1;i++)   printf(" %s\t ",i==curdepth-2&&peod&&eod?" ":"│");
+    if(eod) printf(" └────────");
+    else printf(" ├────────");
+    printf("%s\n",fname);
+    
+    lstat(curpath,&stbuf);
+    if(S_ISDIR(stbuf.st_mode))
+    {
+        itemnum = scandir(curpath,&items,dotfilter,alphasort);  //알파벳 순 출력
+        for(i=0;i<itemnum-1;i++)
+        {
+            sprintf(itempath,"%s/%s",curpath,items[i]->d_name);
+            lstat(itempath,&stbuf);
+            print_tree(itempath,items[i]->d_name,curdepth+1,eod,0);
+            free(items[i]);
+        }
+        if(itemnum)
+        {
+            sprintf(itempath,"%s/%s",curpath,items[i]->d_name);
+            lstat(itempath,&stbuf);
+            print_tree(itempath,items[i]->d_name,curdepth+1,eod,1);        //디렉토리 마지막 처리
+            free(items[i]);
+            free(items);
+        }
+    }
+}
 int do_tree(int pargc, char *pargv[ARGNUM])
 {
     //TODO: 기본동작 : 디렉토리 구조 보여주기
+    struct stat stbuf;
+    struct dirent **items;
+    char curpath[PATH_MAX],itempath[PATH_MAX];
+    int i,itemnum;
+    
+    if(pargc > 1)
+    { fprintf(stderr,"too many arguments\n");   return -1;}
+    chdir(monitorpath);
+    if(access(programpath,F_OK))
+    { fprintf(stderr,"%s is not exist!\n",MNTRDIR);    return -1;}
+
+    strcpy(curpath,monitorpath);
+
+    printf("%s\n",MNTRDIR); //depth : 0
+
+    //하위 디렉토리 출력
+    itemnum = scandir(curpath,&items,dotfilter,alphasort);  //알파벳 순 출력
+    for(i=0;i<itemnum-1;i++)
+    {
+        sprintf(itempath,"%s/%s",curpath,items[i]->d_name);
+        lstat(itempath,&stbuf);
+        print_tree(itempath,items[i]->d_name,1,0,0);
+        free(items[i]);
+    }
+    if(itemnum)
+    {
+        sprintf(itempath,"%s/%s",curpath,items[i]->d_name);
+        lstat(itempath,&stbuf);
+        print_tree(itempath,items[i]->d_name,1,0,1);        //디렉토리 마지막 처리
+        free(items[i]);
+        free(items);
+    }
+
+    chdir(programpath);
 }
 int do_exit(int pargc, char *pargv[ARGNUM])
 {

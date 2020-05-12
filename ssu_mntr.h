@@ -30,6 +30,7 @@ int do_delete(int pargc, char *pargv[ARGNUM]);
 void do_size_d(const char *papath, const char *prpath, const char *fname,int depth);
 int do_size(int pargc, char *pargv[ARGNUM]);
 int do_recover(int pargc, char *pargv[ARGNUM]);
+void print_tree(const char *curpath,const char *fname,int curdepth,int peod,int eod);
 int do_tree(int pargc, char *pargv[ARGNUM]);
 int do_exit(int pargc, char *pargv[ARGNUM]);
 int do_help(int pargc, char *pargv[ARGNUM]);
