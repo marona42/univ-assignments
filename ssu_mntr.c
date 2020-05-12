@@ -20,11 +20,11 @@ void ssu_mntr(int argc, char *argv[])
 {
     getcwd(programpath,PATH_MAX);                           //프로그램 경로를 저장
     sprintf(monitorpath,"%s/%s",programpath,MNTRDIR);    //모니터링 디렉토리 경로를 저장
-//    if ((pid = fork()) < 0)
-//        { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
-//    else if (pid == 0)
-//        if (logger_daemon_init() < 0)         //모니터링 디몬 만들기
-//            { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
+    //if ((pid = fork()) < 0)
+    //    { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
+    //else if (pid == 0)
+    //    if (logger_daemon_init() < 0)         //모니터링 디몬 만들기
+    //        { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
 
     int pargc;
     int i,spacechk;
@@ -128,6 +128,13 @@ int remove_all(const char *path)    //재귀적으로 remove
     }
     return remove(path);
 }
+int isnumber(const char *str)   //주어진 문자열이 숫자로만 있는지: 정수인가?
+{
+    int i,len=strlen(str);
+    for(int i=0;i<len;i++)
+        if(!isdigit(str[i])) return false;
+    return true;
+}
 int getdirsize(const char *dirpath)
 {
     struct stat statbuf;
@@ -148,7 +155,7 @@ int getdirsize(const char *dirpath)
     }
     free(items);
     #ifdef DEBUG
-    printf("%s size : %d\n",dirpath,size);
+    //printf("%s size : %d\n",dirpath,size);
     #endif
     return size;
 }
@@ -180,7 +187,7 @@ int do_delete(int pargc, char *pargv[ARGNUM])
     if(strstr(oldpath,monitorpath) == NULL) //모니터링 디렉토리를 벗어난 경로의 경우 에러처리
     { fprintf(stderr,"%s is not in %s!\n",pargv[1],monitorpath); return -3; }
 
-    ///TODO:[END_TIME] 처리
+    ///[END_TIME] 처리
     if (pargc > 3 && pargv[2][0]!='-' && pargv[3][0]!='-')
     {
         strcat(pargv[2],pargv[3]);
@@ -298,10 +305,118 @@ int do_delete(int pargc, char *pargv[ARGNUM])
         }
     }
 }
+void do_size_d(const char *papath, const char *prpath, const char *fname,int depth)
+{
+    struct stat stbuf;
+    struct dirent **items;
+    char oldpath[PATH_MAX],newpath[PATH_MAX],itempath[PATH_MAX],*filename,*pch;
+    int i,fsize=-1,itemnum;
+
+    sprintf(oldpath,"%s/%s",papath,fname);
+    sprintf(newpath,"%s/%s",prpath,fname);
+    ///대상 크기 출력
+    lstat(oldpath,&stbuf);
+    if(S_ISDIR(stbuf.st_mode))
+        fsize=getdirsize(oldpath);
+    else
+        fsize=stbuf.st_size;
+    printf("%d\t\t%s/%s\n",fsize,prpath,fname); //크기와 상대주소 출력
+
+    if(S_ISDIR(stbuf.st_mode) && depth>1) //하위 디렉토리 출력
+    {
+        itemnum = scandir(oldpath,&items,dotfilter,alphasort);  //알파벳 순 출력
+        for(i=0;i<itemnum;i++)
+        {
+            sprintf(itempath,"%s/%s",oldpath,items[i]->d_name);
+            lstat(itempath,&stbuf);
+            if(S_ISDIR(stbuf.st_mode))
+                do_size_d(oldpath,newpath,items[i]->d_name,depth-1);
+            else    //파일의 경우 바로 출력하기
+                printf("%ld\t\t%s/%s\n",stbuf.st_size,newpath,items[i]->d_name);
+            free(items[i]);
+        }
+        free(items);
+    }
+}
 int do_size(int pargc, char *pargv[ARGNUM])
 {
-    //TODO: 기본동작 :  상대경로(programpath), 크기
-    //TODO: -d옵션  :하위 디렉토리 깊이
+    struct stat stbuf;
+    struct dirent **items;
+    char newpath[PATH_MAX],oldpath[PATH_MAX],itempath[PATH_MAX],*filename,*pch;
+    int i,dOption=1,fsize=-1,itemnum,c;
+    
+    if(pargc < 2)
+    { fprintf(stderr,"need arguments\n");   return -1;}
+    chdir(programpath);
+    if(access(pargv[1],F_OK))
+    { fprintf(stderr,"%s is not exist!\n",pargv[1]);    return -1;}
+
+    realpath(pargv[1],oldpath);
+    ///-d옵션 입력받기 :하위 디렉토리 깊이
+    while((c = getopt(pargc,pargv,"d:"))!= -1)  //getopt가 pargv의 순서를 바꿔놓으므로, 다른 인자들 처리를 먼저 해야한다.
+    {
+        switch(c)
+        {
+            case 'd':
+            #ifdef DEBUG
+                printf("dOption enabled:");
+            #endif
+                if(isnumber(optarg))
+                {
+                    dOption = atoi(optarg);
+                    #ifdef DEBUG
+                        printf("%d\n",dOption);
+                    #endif
+                    if(dOption < 1)
+                        {fprintf(stderr,"must be a number > 1 after -d option\n");   return -1;}
+                }
+                else
+                    {fprintf(stderr,"must be a number after -d option\n");   return -1;}
+                break;
+            case '?': fprintf(stderr,"Error : check options");  return -1;
+        }
+    }optind=0;  //인자처리 초기화
+
+    ///newpath에 oldpath에 해당하는 상대경로 만들기
+    if((pch=strstr(oldpath,programpath)) != NULL )  //포함하는 경우
+    {
+        strcpy(newpath,"./");
+        i=strlen(programpath)+1;
+        strcat(newpath,&oldpath[i]);
+    }
+    else    //..이 포함되어야 하는 경우
+    {
+        for(i=0;oldpath[i]==programpath[i];i++);    //공통주소의 끝까지 간다
+        strcat(newpath,"../");
+        pch=&programpath[i];
+        while((pch=strchr(pch+1,'/'))!=NULL) strcat(newpath,"../");
+        strcat(newpath,&oldpath[i]);
+    }
+
+    ///대상 크기 출력
+    lstat(oldpath,&stbuf);
+    if(S_ISDIR(stbuf.st_mode))
+        fsize=getdirsize(oldpath);
+    else
+        fsize=stbuf.st_size;
+    printf("%d\t\t%s\n",fsize,newpath); //크기와 상대주소 출력
+
+    if(S_ISDIR(stbuf.st_mode) && dOption>1) //하위 디렉토리 출력
+    {
+        itemnum = scandir(oldpath,&items,dotfilter,alphasort);  //알파벳 순 출력
+        for(i=0;i<itemnum;i++)
+        {
+            sprintf(itempath,"%s/%s",oldpath,items[i]->d_name);
+            lstat(itempath,&stbuf);
+            if(S_ISDIR(stbuf.st_mode))
+                do_size_d(oldpath,newpath,items[i]->d_name,dOption-1);
+            else    //파일의 경우 바로 출력하기
+                printf("%ld\t\t%s/%s\n",stbuf.st_size,newpath,items[i]->d_name);
+            free(items[i]);
+        }
+        free(items);
+    }
+    memset(newpath,0,sizeof(newpath));
 }
 int do_recover(int pargc, char *pargv[ARGNUM])
 {

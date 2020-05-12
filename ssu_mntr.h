@@ -20,10 +20,14 @@ extern char programpath[PATH_MAX],monitorpath[PATH_MAX];
 int dotfilter(const struct dirent *ent);
 int rename_all(const char *srcpath,const char *destpath);
 int remove_all(const char *path);
+int getdirsize(const char *dirpath);
+int isnumber(const char *str);
+
 
 void ssu_mntr(int argc, char *argv[]);
 int do_prmpt(int pargc, char *pargv[]);
 int do_delete(int pargc, char *pargv[ARGNUM]);
+void do_size_d(const char *papath, const char *prpath, const char *fname,int depth);
 int do_size(int pargc, char *pargv[ARGNUM]);
 int do_recover(int pargc, char *pargv[ARGNUM]);
 int do_tree(int pargc, char *pargv[ARGNUM]);
