@@ -12,6 +12,10 @@
 #include <sys/types.h>
 #include "ssu_mntr.h"
 #include "logger.h"
+#ifdef DEBUG
+    #include <errno.h>
+    extern int errno;
+#endif
 
 pid_t pid;
 char *pargv[ARGNUM], prmptinput[BUFSIZE], programpath[PATH_MAX],monitorpath[PATH_MAX];
@@ -46,6 +50,7 @@ void ssu_mntr(int argc, char *argv[])
 }
 int do_prmpt(int pargc,char *pargv[ARGNUM])
 {
+    chdir(programpath); //오류시 변경안하고 나오므로 확실히 해둠.
     for(int i=0;pargv[0][i];i++)    pargv[0][i]=tolower(pargv[0][i]);   //pargv[0] 소문자 변환
     #ifdef DEBUG 
     printf("pargc : %d\n",pargc);
@@ -62,22 +67,35 @@ int do_prmpt(int pargc,char *pargv[ARGNUM])
 }
 int dotfilter(const struct dirent *ent) //scandir시 ., .. 제외
 { return strcmp(ent->d_name,".") && strcmp(ent->d_name,".."); }
-int olddtimesort(const struct dirent **a, const struct dirent **b)      //scandir시 오래된 순 정렬
+time_t getdtime(const char *fname)
 {
-    FILE *ap, *bp;
-    char abuf[BUFSIZE], bbuf[BUFSIZE];
-    struct tm at, bt;
-    ap = fopen((*a)->d_name,"r");   bp = fopen((*b)->d_name,"r");
-    fgets(abuf,BUFSIZE,ap);     fgets(bbuf,BUFSIZE,bp);
-    fgets(abuf,BUFSIZE,ap);     fgets(bbuf,BUFSIZE,bp);
-    fgets(abuf,BUFSIZE,ap);     fgets(bbuf,BUFSIZE,bp);
-    #ifdef DEBUG
-    //printf("%s %s:: %s vs %s\n",(*a)->d_name,(*b)->d_name,abuf,bbuf);
-    #endif
-    strptime(abuf,TIMEFORMAT,&at); strptime(bbuf,TIMEFORMAT,&bt);
-
-    return mktime(&at)>mktime(&bt);
+    FILE *ap;
+    char abuf[PATH_MAX];
+    struct tm at;
+    ap = fopen(fname,"r");
+    fgets(abuf,PATH_MAX,ap);
+    fgets(abuf,PATH_MAX,ap);
+    fgets(abuf,PATH_MAX,ap);
+    strptime(abuf,TIMEFORMAT,&at);
+    fclose(ap);
+    return mktime(&at);
 }
+time_t getmtime(const char *fname)
+{
+    FILE *ap;
+    char abuf[PATH_MAX];
+    struct tm at;
+    ap = fopen(fname,"r");
+    fgets(abuf,PATH_MAX,ap);
+    fgets(abuf,PATH_MAX,ap);
+    fgets(abuf,PATH_MAX,ap);
+    fgets(abuf,PATH_MAX,ap);
+    strptime(abuf,TIMEFORMAT,&at);
+    fclose(ap);
+    return mktime(&at);
+}
+int olddtimesort(const struct dirent **a, const struct dirent **b)      //scandir compare: 삭제시간 오름차순 정렬
+{ return getdtime((*a)->d_name)>getdtime((*b)->d_name); }
 int rename_all(const char *srcpath,const char *destpath)    //재귀적으로 remove
 {
     #ifdef DEBUG
@@ -207,7 +225,7 @@ int do_delete(int pargc, char *pargv[ARGNUM])
         {
             case 'i': iOption = true; break;
             case 'r': rOption = true; break;
-            case '?': fprintf(stderr,"Error : check options");  return -1;
+            case '?': fprintf(stderr,"Error : check options\n");  return -1;
         }
     }optind=0;  //인자처리 초기화
 
@@ -238,11 +256,11 @@ int do_delete(int pargc, char *pargv[ARGNUM])
         if(lstat("trash",&stbuf) < 0)       //trash가 없다면
         {
             if(mkdir("trash",0777) < 0)     //생성
-            { fprintf(stderr,"failed to make 'trash' directory\n"); return -1;}
+            { fprintf(stderr,"failed to make 'trash' directory\n"); return -2;}
             if(mkdir("trash/files",0777) < 0)     //생성
-            { fprintf(stderr,"failed to make 'trash/files' directory\n"); return -1;}
+            { fprintf(stderr,"failed to make 'trash/files' directory\n"); return -2;}
             if(mkdir("trash/info",0777) < 0)     //생성
-            { fprintf(stderr,"failed to make 'trash/info' directory\n"); return -1;}
+            { fprintf(stderr,"failed to make 'trash/info' directory\n"); return -2;}
             
         }
         else if (!S_ISDIR(stbuf.st_mode))   //있는데 디렉토리가 아니라면?
@@ -373,7 +391,7 @@ int do_size(int pargc, char *pargv[ARGNUM])
                 else
                     {fprintf(stderr,"must be a number after -d option\n");   return -1;}
                 break;
-            case '?': fprintf(stderr,"Error : check options");  return -1;
+            case '?': fprintf(stderr,"Error : check options\n");  return -1;
         }
     }optind=0;  //인자처리 초기화
 
@@ -418,13 +436,176 @@ int do_size(int pargc, char *pargv[ARGNUM])
     }
     memset(newpath,0,sizeof(newpath));
 }
+int getname(const char *path, char *name)   //^ 뒤를 떼서 파일 이름만 가져오기
+{
+    char *end;
+    end=strchr(path,'^');
+    strncpy(name,path,end-path);
+    name[end-path]='\0';
+}
+void getpath(const char *path, char *name)   //^ 뒤를 떼서 파일 이름만 가져오기
+{
+    FILE *ap;
+    ap = fopen(path,"r");
+    fgets(name,PATH_MAX,ap);
+    fgets(name,PATH_MAX,ap);
+    name[strlen(name)-1]=0; //마지막 \n지우기
+    fclose(ap);
+}
 int do_recover(int pargc, char *pargv[ARGNUM])
 {
-    //TODO: 기본동작 : 파일 복구
-        //TODO: 동일한 이름 파일 선택
-        //TODO: 동일한 이름 파일 복구시 숫자_ 추가
-    //TODO: -l 옵션 : 삭제시간 오래된 순으로 출력후 진행
+    struct stat stbuf;
+    struct tm tmbuf;
+    struct dirent **items;
+    time_t dtime,mtime;
+    char newpath[PATH_MAX],oldpath[PATH_MAX],filename[PATH_MAX],infopath[PATH_MAX],npath[PATH_MAX],timememo[BUFSIZE];
+    FILE *infop;
+    int i,li,c,lOption=false,itemnum, *fmap;
 
+    if (pargc < 2)
+    { fprintf(stderr,"need arguments\n");   return -1;}
+
+    ///trash, info,files 디렉토리 확인
+    if(lstat("trash",&stbuf) < 0)
+    { fprintf(stderr,"There is no 'trash' directory!\n"); return -2;}
+    else if (!S_ISDIR(stbuf.st_mode))   //있긴한데 디렉토리가 아니라면?
+    { fprintf(stderr,"'trash' is not a directory!\n"); return -2;}
+
+    sprintf(npath,"%s/trash/files",programpath);    //npath 임시로 씀
+    if(lstat(npath,&stbuf) < 0)
+    { fprintf(stderr,"There is no 'trash/files' directory!\n"); return -2;}
+    else if (!S_ISDIR(stbuf.st_mode))
+    { fprintf(stderr,"'trash/files' is not a directory!\n"); return -2;}    memset(npath,0,sizeof(npath));
+
+    sprintf(infopath, "%s/trash/info", programpath);
+    if(lstat(infopath,&stbuf) < 0)
+    { fprintf(stderr,"There is no 'trash/info' directory!\n"); return -2;}
+    else if (!S_ISDIR(stbuf.st_mode))
+    { fprintf(stderr,"'trash/info' is not a directory!\n"); return -2;}
+
+    strcpy(filename,pargv[1]);  //[FILENAME] 복사만 해두고 나중에 처리
+
+    while((c = getopt(pargc,pargv,"l"))!= -1)  //getopt가 pargv의 순서를 바꿔놓으므로, [FILENAME]처리를 먼저 해야한다.
+    {
+        switch(c)
+        {
+            case 'l': lOption = true; break;
+            case '?': fprintf(stderr,"Error : check options\n");  return -1;
+        }
+    }optind=0;  //인자처리 초기화
+    ///-l 옵션 : 삭제시간 오래된 순으로 출력후 진행
+    if(lOption)
+    {
+        chdir(infopath);
+        if((itemnum=scandir(infopath,&items,dotfilter,olddtimesort))<0)
+        {
+            fprintf(stderr,"scandir(info) failed!\n");
+            #ifdef DEBUG
+                switch(errno)
+                {
+                    case ENOENT:
+                        fprintf(stderr,"dirp isn't exist\n");
+                        break;
+                    case ENOMEM:
+                        fprintf(stderr,"not enough memory\n");
+                        break;
+                    case ENOTDIR:
+                        fprintf(stderr,"is not dir\n");
+                        break;
+                }
+            #endif
+            return -2;
+        }
+        printf("List of trash files:-------\n[N] [FILENAME]\t[DELETEDTIME]\n");
+        for (i=0;i<itemnum;i++)
+        {
+            getname(items[i]->d_name,newpath);  //변수돌려쓰기
+            dtime = getdtime(items[i]->d_name);
+            strftime(timememo,BUFSIZE,TIMEFORMAT,localtime(&dtime));
+            printf("%d. %s \t\t%s\n",i+1,newpath,timememo);
+            free(items[i]);
+        }memset(newpath,0,sizeof(newpath));
+        free(items);
+        printf("--------------------------\n");
+        chdir(programpath);
+    }
+
+    ///TODO: [FILENAME] 처리
+    chdir(infopath);
+    if((itemnum=scandir(infopath,&items,dotfilter,olddtimesort))<0)
+    {
+        fprintf(stderr,"scandir(info) failed!\n");
+        #ifdef DEBUG
+            switch(errno)
+            {
+                case ENOENT:
+                    fprintf(stderr,"dirp isn't exist\n");
+                    break;
+                case ENOMEM:
+                    fprintf(stderr,"not enough memory\n");
+                    break;
+                case ENOTDIR:
+                    fprintf(stderr,"is not dir\n");
+                    break;
+            }
+        #endif
+        return -2;
+    }
+
+    c=0;
+    for (i=0;i<itemnum;i++) //파일 세기
+    {
+        getname(items[i]->d_name,newpath);  //변수돌려쓰기
+        if(!strcmp(newpath,filename))   {c++; li=i;}
+        #ifdef DEBUG
+        //    printf("%s : %d\n",newpath,c);
+        #endif
+    }memset(newpath,0,sizeof(newpath));
+    if(!c)
+    { fprintf(stderr,"there is no '%s' in 'trash' directory\n",filename);   return -2; }
+    else if(c > 1)    //여러 개 있는 경우
+    {
+        fmap=malloc(sizeof(int)*(c+1));
+        c=0;
+        for (i=0;i<itemnum;i++)
+        {
+            getname(items[i]->d_name,newpath);  //변수돌려쓰기
+            if(!strcmp(newpath,filename))
+            {
+                dtime = getdtime(items[i]->d_name);
+                mtime = getmtime(items[i]->d_name);
+                strftime(timememo,BUFSIZE,TIMEFORMAT,localtime(&dtime));
+                printf("[%d] %s \tDeleted : %s\t",++c,newpath,timememo);    fmap[c]=i;
+                strftime(timememo,BUFSIZE,TIMEFORMAT,localtime(&mtime));
+                printf("Modified : %s\n",timememo);
+            }
+        }
+        printf("Choose : ");
+        fgets(timememo,BUFSIZE,stdin);  timememo[strlen(timememo)-1]='\0';
+        while((li=atoi(timememo)) > c || !isnumber(timememo))   //잘못된 입력인 경우
+        {
+            printf("Please input [1-%d]\nChoose : ",c); fgets(timememo,BUFSIZE,stdin);
+        }
+        li=fmap[li];
+        free(fmap);
+    }
+    //하나인 경우 이미 li에 저장됨
+
+    sprintf(oldpath,"%s/trash/files/%s",programpath,items[li]->d_name);
+    getpath(items[li]->d_name,newpath);
+    strncpy(npath,newpath,strlen(newpath)-strlen(filename)-1);
+    sprintf(infopath,"%s/trash/info/%s",programpath,items[li]->d_name);
+
+    for(i=0;i<itemnum;i++) free(items[i]);
+    free(items);
+
+    i=0;
+    while(!access(newpath,F_OK)) {sprintf(newpath,"%s/%d_%s",npath,++i,filename);}   //같은 이름 있는지 보고 넘긴다
+
+    ///복구 액션
+    remove(infopath);
+    rename_all(oldpath,newpath);   //move from trash
+    chdir(programpath);
 }
 void print_tree(const char *curpath,const char *fname,int curdepth,int peod,int eod)
 {
