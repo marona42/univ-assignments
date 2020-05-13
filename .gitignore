@@ -1,2 +1,7 @@
 *.o
 ssu_mntr
+*.deleted
+watching/
+trash/
+log.txt
+.vscode
