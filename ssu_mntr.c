@@ -33,11 +33,13 @@ void ssu_mntr(int argc, char *argv[])
             init_monitoring(monitorpath);
             while(1)
             {
-                printf("*heartbeat*\n");
                 do_monitor(monitorpath);
                 sleep(1);
             }
+            exit(0);
         }
+    printf("fork pid : %d\n",pid);
+    printf("prompt pid : %d\n",getpid());
     int pargc;
     int i,spacechk;
     char *ptok;
@@ -255,12 +257,12 @@ int do_delete(int pargc, char *pargv[ARGNUM])
             {
                 printf("Delete? [y/n]:");
                 scanf("%s\n",timememo);
-                if(!strcmp(timememo,"n") || !strcmp(timememo,"N") || !strcmp(timememo,"0")) return -9;
+                if(!strcmp(timememo,"n") || !strcmp(timememo,"N") || !strcmp(timememo,"0")) exit(-9);
             }
             if(remove_all(oldpath)<0)
-            { fprintf(stderr, "remove failed\n");   return -4; }
+            { fprintf(stderr, "remove failed\n");   exit(-4); }
             else
-            { printf("removed successfully\n");    return 0;}
+            { printf("removed successfully\n");    exit(0);}
         }
     }
     else
@@ -332,6 +334,8 @@ int do_delete(int pargc, char *pargv[ARGNUM])
                 free(items);
             }
             chdir(programpath);
+
+            exit(0);
         }
     }
 }
