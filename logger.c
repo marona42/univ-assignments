@@ -26,7 +26,9 @@ int logger_daemon_init(const char *ppath)
 		exit(0);
 
 	dpid = getpid();
-	printf("process %d running as daemon\n",dpid);
+	#ifdef DEBUG
+		printf("process %d running as daemon\n",dpid);
+	#endif
 	setsid();
 	signal(SIGTTIN,SIG_IGN);
 	signal(SIGTTOU,SIG_IGN);
@@ -35,11 +37,11 @@ int logger_daemon_init(const char *ppath)
 
 	umask(0);
 	chdir("/");
-	//for (fd = 0;fd < maxfd;fd++)
-	//	close(fd);
-	//fd = open("/dev/null", O_RDWR);
-	//dup(0);
-	//dup(0);
+	for (fd = 0;fd < maxfd;fd++)
+		close(fd);
+	fd = open("/dev/null", O_RDWR);
+	dup(0);
+	dup(0);
 	strcpy(logpath,ppath);
 	strcat(logpath,"/");	strcat(logpath,LOGNAME);
 	mlog=fopen(logpath,"a");
@@ -48,30 +50,37 @@ int logger_daemon_init(const char *ppath)
 }
 int dotfilter(const struct dirent *ent) //scandir시 ., .. 제외
 { return strcmp(ent->d_name,".") && strcmp(ent->d_name,".."); }
-int inspect_file(statdata *sd,const struct stat *st,const char *fname)
+int inspect_file(statdata *sd,const struct stat *st,const char *fname,time_t now)
 {
 																				//테이블에 없는데 디렉토리에 있음=created[1]
-	if(sd==NULL) {table_add(st,fname); return 1;} 									//테이블에 있는데 디렉토리에 없음=deleted[2]
+	if(sd==NULL) {table_add(st,fname,now); return 1;} 									//테이블에 있는데 디렉토리에 없음=deleted[2]
 	if(st->st_mtime!=sd->mtime)	{sd->mtime=st->st_mtime; return 3;}				//둘 다 있고 		mtime이 바뀜 =modified[3]
 	else return 0;	//nothing happened
 }
-void table_add(const struct stat *st,const char *name)
+void table_add(const struct stat *st,const char *name,time_t now)
 {
-	statdata *cur=filetable[(st->st_ino)%BUCKETSIZE], *pre;
-	pre=cur;
+	statdata *cur=filetable[(st->st_ino)%BUCKETSIZE], *pre=NULL;
 	while(cur!=NULL)
 	{
 		pre=cur;
 		cur=cur->next;
 	}
-	cur = malloc(sizeof(statdata));
 	if(cur == pre) //첫 요소인 경우
+	{
+		cur = malloc(sizeof(statdata));
 		cur->prev=NULL;
+		filetable[(st->st_ino)%BUCKETSIZE]=cur;
+	}
 	else
+	{
+		cur = malloc(sizeof(statdata));
 		cur->prev=pre;
+		pre->next=cur;
+	}
 	cur->next=NULL;
 	cur->inode=st->st_ino;
 	cur->mtime=st->st_mtime;
+	cur->refresh=now;
 	cur->fname=malloc(sizeof(char)*strlen(name));
 	strcpy(cur->fname,name);
 }
@@ -82,6 +91,10 @@ void table_del(statdata *sd)
 		sd->next->prev = sd->prev;
 		sd->prev->next = sd->next;
 	}
+	else if(!sd->next && !sd->prev)	//혼자인 경우
+	{
+		filetable[sd->inode%BUCKETSIZE]=NULL;
+	}
 	else if(sd->next == NULL)	//마지막인 경우
 	{
 		sd->prev->next=NULL;
@@ -90,8 +103,9 @@ void table_del(statdata *sd)
 	{
 		sd->next->prev=NULL;
 	}
-
+	fflush(stdout);
 	free(sd->fname);
+	fflush(stdout);
 	free(sd);
 }
 void table_chk(time_t now)
@@ -109,8 +123,10 @@ void table_chk(time_t now)
 			if(cur->refresh != now)
 			{
 				fprintf(mlog,"[%s][%s_%s]\n",timememo,action[2],cur->fname);
-				statdata *tmp = cur;
+				statdata *tmp;
+				tmp = cur;
 				cur=cur->next;
+				fflush(stdout);
 				table_del(tmp);
 			}
 			else
@@ -138,14 +154,15 @@ void init_monitoring(const char *mpath)
     struct dirent **items;
     int itemnum,i;
     char itempath[PATH_MAX];
+	time_t now;
+	time(&now);
 
     itemnum = scandir(mpath,&items,dotfilter,NULL);
     for(i=0;i<itemnum;i++)
     {
         sprintf(itempath,"%s/%s",mpath,items[i]->d_name);
-		printf("%s\n",itempath);
         lstat(itempath,&statbuf);
-        table_add(&statbuf,items[i]->d_name);
+        table_add(&statbuf,items[i]->d_name,now);
 
 		if(S_ISDIR(statbuf.st_mode))
 			init_monitoring(itempath);
@@ -157,7 +174,6 @@ void do_monitor(const char *path)
 {
 	time_t timenow;
 	time(&timenow);
-	fprintf(mlog,"%lu\n",timenow);
 	do_monitoring(path,timenow);
 	table_chk(timenow);
 }
@@ -174,11 +190,10 @@ void do_monitoring(const char *path,time_t timenow)
     {
         sprintf(itempath,"%s/%s",path,items[i]->d_name);
         lstat(itempath,&statbuf);
-        if(mstatus=inspect_file(table_if(statbuf.st_ino,timenow),&statbuf,items[i]->d_name))
-			{
-				fprintf(mlog,"[%s][%s_%s]\n",timememo,action[mstatus],items[i]->d_name);
-				printf("[%s][%s_%s]\n",timememo,action[mstatus],items[i]->d_name);
-			}
+        if(mstatus=inspect_file(table_if(statbuf.st_ino,timenow),&statbuf,items[i]->d_name,timenow))
+		{
+			fprintf(mlog,"[%s][%s_%s]\n",timememo,action[mstatus],items[i]->d_name);
+		}
 		if(S_ISDIR(statbuf.st_mode))
 			do_monitoring(itempath,timenow);
         free(items[i]);

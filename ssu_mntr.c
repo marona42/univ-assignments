@@ -27,19 +27,17 @@ void ssu_mntr(int argc, char *argv[])
     if ((pid = fork()) < 0)
         { fprintf(stderr,"Error : Fork failed\n");  exit(1); }
     else if (pid == 0)
+    {
+        if (logger_daemon_init(programpath) < 0)         //모니터링 디몬 만들기
+            { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
+        init_monitoring(monitorpath);
+        while(1)
         {
-            if (logger_daemon_init(programpath) < 0)         //모니터링 디몬 만들기
-                { fprintf(stderr,"Error : daemon init failed\n");   exit(1); }
-            init_monitoring(monitorpath);
-            while(1)
-            {
-                do_monitor(monitorpath);
-                sleep(1);
-            }
-            exit(0);
+            do_monitor(monitorpath);
+            sleep(1);
         }
-    printf("fork pid : %d\n",pid);
-    printf("prompt pid : %d\n",getpid());
+        exit(0);
+    }
     int pargc;
     int i,spacechk;
     char *ptok;
@@ -47,6 +45,7 @@ void ssu_mntr(int argc, char *argv[])
     {
         printf("%d>",SNUMBER);
         fgets(prmptinput,BUFSIZE,stdin);
+        fflush(stdin);
         prmptinput[strlen(prmptinput)-1]=0; //마지막 개행문자를 없앰
         ptok=strtok(prmptinput," ");    pargc=0;
         while(ptok != NULL && pargc < ARGNUM-1) //pargv를 공백으로 나누기
