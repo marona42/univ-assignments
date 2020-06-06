@@ -11,12 +11,11 @@
 #logger.o : logger.c logger.h
 #	gcc -c logger.c
 
+ssu_crond: ssu_crond.c
+	gcc ssu_crond.c -o ssu_crond
 
 ssu_crontab: bootstrap_c.o cront.o
 	gcc bootstrap_c.o cront.o -o ssu_crontab
-
-ssu_crond: ssu_crond.c
-	gcc ssu_crond.c -o ssu_crond
 
 bootstrap_c: cront.o cront.h
 	gcc -c bootstrap_c.o 
