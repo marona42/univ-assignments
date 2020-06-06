@@ -1,0 +1,18 @@
+# ssu_crontab
+    ## prompt
+        add
+        remove
+        exit
+    ## crond
+        daemon
+        execute command
+        logging
+
+
+# ssu_rsync
+    
+    src -> dst
+
+    -r : recursive
+    -m : clean
+    -t : tar
