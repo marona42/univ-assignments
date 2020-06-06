@@ -11,16 +11,30 @@
 #logger.o : logger.c logger.h
 #	gcc -c logger.c
 
-ssu_rsync: bootstrap_r.o
-	gcc bootstrap_r.o -o ssu_rsync
 
-ssu_crontab: bootstrap_c.o crond.o
-	gcc bootstrap_c.o crond.o -o ssu_crontab
+ssu_crontab: bootstrap_c.o cront.o
+	gcc bootstrap_c.o cront.o -o ssu_crontab
+
+ssu_crond: ssu_crond.c
+	gcc ssu_crond.c -o ssu_crond
+
+bootstrap_c: cront.o cront.h
+	gcc -c bootstrap_c.o 
 
 cront.o : cront.c cront.h
 	gcc -c cront.c
+
+ssu_rsync: bootstrap_r.o
+	gcc bootstrap_r.o -o ssu_rsync
+
+bootstrap_r: rsync.o rsync.h
+	gcc -c bootstrap_r.o
+
+rsync.o : rsync.c rsync.h
+	gcc -c rync.c -lpthread
 
 clean :
 	rm *.o
 	rm ssu_rsync
 	rm ssu_crontab
+	rm ssu_crond
