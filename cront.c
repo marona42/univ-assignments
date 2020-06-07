@@ -95,8 +95,9 @@ int do_add(int pargc,char *pargv[ARGNUM])
 
 int do_remove(int pargc,char *pargv[ARGNUM])
 {
-    int line = line_tab(),tline;
+    int line = line_tab(),tline,cline;
     FILE *tabf, *tmpf;
+    char buf[BUFSIZE];
     //커맨드 검증
     if(pargc != 2)
     { fprintf(stderr,"Error: syntax: remove <line number>\n"); return 1;}
@@ -107,12 +108,18 @@ int do_remove(int pargc,char *pargv[ARGNUM])
     { fprintf(stderr,"Error: syntax: remove <line number:[1-%d]>\n",line); return 1;}
     
     //ssu_crontab_file 삭제
-    tabf=fopen(TABNAME,"a");
-    #ifdef DEBUG
-    fprintf(stderr,"adding \"%s\"\n",combuf);
-    #endif
-    fprintf(tabf,"%s\n",combuf);
-    fclose(tabf);
+    tabf=fopen(TABNAME,"r");    tmpf=fopen("."TABNAME,"w"); //임시파일
+
+    cline=0;
+    while(1)
+    {
+        cline++;
+        if(fgets(buf,BUFSIZE,tabf) < 1) break;
+        if(cline == tline) continue;    //지울 줄은 넘김
+        fprintf(tmpf,"%s",buf);
+    }
+    fclose(tabf);   fclose(tmpf);
+    rename("."TABNAME,TABNAME);     //임시파일을 본 파일로 덮어쓰기
 
     add_log(pargv[1],A_REMOVE);    //ssu_crontab_log 로깅
     show_tab();
