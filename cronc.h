@@ -24,7 +24,6 @@ typedef struct tabcommand_s{
 int isnumber(const char *str);
 int is_valid(char t);
 int are_valid(char *ar);
-void add_tab(char *txt);
 void add_log(char *txt,int action);
 int line_tab();
 int show_tab();

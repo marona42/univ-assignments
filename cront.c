@@ -61,20 +61,33 @@ int do_prmpt(int pargc,char *pargv[ARGNUM])
 int do_add(int pargc,char *pargv[ARGNUM])
 {
     char combuf[BUFSIZE];
+    FILE *tabf;
     //커맨드 문법 검증
     if(pargc < 6)
-    { fprintf(stderr,"Error: Not enough parameter!\n");       return 1; }
+    { fprintf(stderr,"Error: Not enough parameter!(%d<6)\n",pargc);       return 1; }
     int i;
     for(i=1;i<6;i++)
     {
-        if(are_valid(pargv[i]))
+        if(!are_valid(pargv[i]))
         {
-            fprintf(stderr,"Error: Invalid parameter!\n");       return 1;
+            fprintf(stderr,"Error: Invalid parameter!: \"%s\"\n",pargv[i]);       return 1;
         }
     }
     strcpy(combuf,pargv[1]);
     for(i=2;i<pargc;i++)    { strcat(combuf," "); strcat(combuf,pargv[i]); }    //뒤의 pargv를 하나로 붙임
-    add_tab(combuf); //ssu_crontab_file 추가
+
+    //ssu_crontab_file 추가
+    if(access(TABNAME,R_OK))
+    {
+        fprintf(stderr,"Warning: %s doesn't exist. creating %s...\n",TABNAME,TABNAME);
+    }
+    tabf=fopen(TABNAME,"a");
+    #ifdef DEBUG
+    fprintf(stderr,"adding \"%s\"\n",combuf);
+    #endif
+    fprintf(tabf,"%s\n",combuf);
+    fclose(tabf);
+
     add_log(combuf,A_ADD);   //ssu_crontab_log 로깅
     show_tab();
     return 0;
@@ -83,15 +96,24 @@ int do_add(int pargc,char *pargv[ARGNUM])
 int do_remove(int pargc,char *pargv[ARGNUM])
 {
     int line = line_tab(),tline;
+    FILE *tabf, *tmpf;
     //커맨드 검증
     if(pargc != 2)
-    { fprintf(stderr,"Error: syntax: remove <line number:[1-%d]>",line); return 1;}
+    { fprintf(stderr,"Error: syntax: remove <line number>\n"); return 1;}
     if(!isnumber(pargv[1]))
-    { fprintf(stderr,"Error: syntax: remove <line number:[1-%d]>",line); return 1;}
+    { fprintf(stderr,"Error: syntax: remove <line number>\n"); return 1;}
     tline = atoi(pargv[1]);
     if(tline > line || tline < 1)
-    { fprintf(stderr,"Error: syntax: remove <line number:[1-%d]>",line); return 1;}
-    //TODO: ssu_crontab_file 삭제
+    { fprintf(stderr,"Error: syntax: remove <line number:[1-%d]>\n",line); return 1;}
+    
+    //ssu_crontab_file 삭제
+    tabf=fopen(TABNAME,"a");
+    #ifdef DEBUG
+    fprintf(stderr,"adding \"%s\"\n",combuf);
+    #endif
+    fprintf(tabf,"%s\n",combuf);
+    fclose(tabf);
+
     add_log(pargv[1],A_REMOVE);    //ssu_crontab_log 로깅
     show_tab();
     return 0;
