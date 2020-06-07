@@ -1,7 +1,7 @@
 *.o
-ssu_mntr
-*.deleted
-watching/
-trash/
-log.txt
+ssu_crontab
+ssu_crond
+ssu_rsync
+ssu_crontab_log
+ssu_crontab_file
 .vscode

@@ -11,26 +11,29 @@
 #logger.o : logger.c logger.h
 #	gcc -c logger.c
 
-ssu_crond: ssu_crond.c
-	gcc ssu_crond.c -o ssu_crond
+##ssu_crond: crond.c	cronc.o
+##	gcc crond.c cronc.o -o ssu_crond
 
-ssu_crontab: bootstrap_c.o cront.o
-	gcc bootstrap_c.o cront.o -o ssu_crontab
+ssu_crontab: bootstrap_c.o cront.o cronc.o
+	gcc bootstrap_c.o cront.o cronc.o -o ssu_crontab
 
-bootstrap_c: cront.o cront.h
-	gcc -c bootstrap_c.o 
+bootstrap_c.o: cront.o cront.h cronc.o cronc.h
+	gcc -c bootstrap_c.c
 
-cront.o : cront.c cront.h
+cront.o : cront.c cront.h cronc.h
 	gcc -c cront.c
 
-ssu_rsync: bootstrap_r.o
-	gcc bootstrap_r.o -o ssu_rsync
+cronc.o : cronc.c cronc.h
+	gcc -c cronc.c
 
-bootstrap_r: rsync.o rsync.h
-	gcc -c bootstrap_r.o
-
-rsync.o : rsync.c rsync.h
-	gcc -c rync.c -lpthread
+##ssu_rsync: bootstrap_r.o
+##	gcc bootstrap_r.c -o ssu_rsync
+##
+##bootstrap_r.o: rsync.o rsync.h
+##	gcc -c bootstrap_r.o
+##
+##rsync.o : rsync.c rsync.h
+##	gcc -c rync.c -lpthread
 
 clean :
 	rm *.o

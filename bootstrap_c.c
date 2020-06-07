@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include "ssu_mntr.h"
+#include "cront.h"
 
 #define SECOND_TO_MICRO 1000000
 
@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 	struct timeval begin_t, end_t;	
 	gettimeofday(&begin_t, NULL);	//시작시간을 저장, 뒤의 NULL은 사용하지 않는 timezone인자.
 
-	ssu_mntr(argc, argv);			//프로그램 시작
+	ssu_crontab(argc, argv);			//프로그램 시작
 
 	gettimeofday(&end_t, NULL);		//끝난 시간을 저장.
 	ssu_runtime(&begin_t, &end_t);
