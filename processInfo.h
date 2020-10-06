@@ -1,6 +1,9 @@
 struct processInfo
 {
+    char name[16];
+    int pid;
     int ppid;
-    int psize;
+    enum procstate state;
+    uint psize;
     int numberContextSwitches;
 };
