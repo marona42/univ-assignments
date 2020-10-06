@@ -129,10 +129,14 @@ sys_get_proc_info(void)
 int
 sys_set_prio(void)
 {
-  return 0;
+  int tpid, tprio;
+  if(argint(0,&tpid)<0 || argint(1,&tprio)) return -1;
+  return set_prio(tpid,tprio);
 }
 int
 sys_get_prio(void)
 {
-  return 0;
+  int tpid;
+  if(argint(0,&tpid)<0) return -1;
+  return get_prio(tpid);
 }
