@@ -23,13 +23,13 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int sys_hello(void);
-int sys_hello_name(void);
-int sys_get_num_proc(void);
-int sys_get_max_pid(void);
-int sys_get_proc_info(void);
-int sys_set_prio(int);
-int sys_get_prio(int);
+int hello(void);
+int hello_name(const char*);
+int get_num_proc(void);
+int get_max_pid(void);
+int get_proc_info(void);
+int set_prio(int);
+int get_prio(int);
 
 // ulib.c
 int stat(const char*, struct stat*);
