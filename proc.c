@@ -112,6 +112,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+  p->prior = INITPRIO;
   p->ncs=0;
 
   return p;
@@ -593,4 +594,13 @@ int get_proc_info(int tpid,struct processInfo *tstat)
   tstat->numberContextSwitches=p->ncs;
 
   return tpid;
+}
+
+int set_prio(int tpid,int tprio)
+{
+
+}
+int get_prio(int tid)
+{
+  
 }
