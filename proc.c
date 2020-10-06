@@ -596,11 +596,25 @@ int get_proc_info(int tpid,struct processInfo *tstat)
   return tpid;
 }
 
-int set_prio(int tpid,int tprio)
+int set_prio(int tprio)
 {
-
+  struct proc *p;
+  acquire(&ptable.lock);
+  myproc()->prior=tprio;
+  release(&ptable.lock);
+  return 0;
 }
 int get_prio(int tid)
 {
-  
+  struct proc *p;
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if(p->pid == tid && p->state!=UNUSED)
+    {
+      release(&ptable.lock);
+      return p->prior;
+    }
+  release(&ptable.lock);
+  return -1;
 }
