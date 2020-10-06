@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "processInfo.h"
 
 int
 sys_fork(void)
@@ -121,10 +122,9 @@ sys_get_proc_info(void)
 {
   int tproc;
   struct processInfo *tinf;
-  if(argint(0,&tproc)<0) return -1;
-  if(argptr(0,&tinf)<0) return -1;
-  get_proc_info(tproc,tinf);
-  return 0;
+  if(argint(0,&tproc)<0 || argptr(1,(void*)&tinf,sizeof(*tinf))<0) return -1;
+
+  return get_proc_info(tproc,tinf);
 }
 int
 sys_set_prio(void)

@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "processInfo.h"
 
 struct {
   struct spinlock lock;
@@ -111,6 +112,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+  p->ncs=0;
 
   return p;
 }
@@ -342,6 +344,7 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
+      p->ncs++;
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -572,4 +575,22 @@ int get_max_pid()
 
   release(&ptable.lock);
   return procmax;
+}
+
+int get_proc_info(int tpid,struct processInfo *tstat)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if(p->pid == tpid)  break;
+  release(&ptable.lock);
+
+  if(p->state == UNUSED) return 0;
+  tstat->pid=tpid;
+  tstat->ppid=p->parent?p->parent->pid:0;
+  tstat->psize=p->sz;
+  tstat->numberContextSwitches=p->ncs;
+
+  return tpid;
 }
