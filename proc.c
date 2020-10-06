@@ -532,3 +532,44 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int
+hello(void)
+{
+  cprintf("helloxv6\n");
+  return 0;
+}
+int
+hello_name(char *n)
+{
+  cprintf("hello ");
+  cprintf(n);
+  cprintf("\n");
+  return 0;
+}
+
+int get_num_proc()
+{
+  struct proc *p;
+  int proccnt=0;
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if(p->state != UNUSED)  proccnt++;
+
+  release(&ptable.lock);
+  return proccnt;
+}
+
+int get_max_pid()
+{
+  struct proc *p;
+  int procmax=0;
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if(p->state != UNUSED && p->pid > procmax)  procmax=p->pid;
+
+  release(&ptable.lock);
+  return procmax;
+}
