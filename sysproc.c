@@ -93,22 +93,41 @@ sys_uptime(void)
 int
 sys_hello(void)
 {
-  cprintf("Helloxv6\n");
-  return 0;
+  return hello();
 }
 
 int
-sys_hello_name(const char* name)
+sys_hello_name(void)
 {
-  if(!name) return -1;
-  cprintf("hello %s\n",name);
-  return 0;
+  char *name="";
+  if(argstr(0, &name) < 0)
+    return -1;
+  return hello_name(name);
 }
 
-/*TODO:
-sys_get_num_proc
-sys_get_max_pid
-sys_get_proc_info
-sys_set_prio
-sys_get_prio
-*/
+/*TODO: implements these syscalls:*/
+int
+sys_get_num_proc(void)
+{
+  return get_num_proc();
+}
+int
+sys_get_max_pid(void)
+{
+  return get_max_pid();
+}
+int
+sys_get_proc_info(void)
+{
+  return 0;
+}
+int
+sys_set_prio(int pid)
+{
+  return 0;
+}
+int
+sys_get_prio(int pid)
+{
+  return 0;
+}
