@@ -119,15 +119,20 @@ sys_get_max_pid(void)
 int
 sys_get_proc_info(void)
 {
+  int tproc;
+  struct processInfo *tinf;
+  if(argint(0,&tproc)<0) return -1;
+  if(argptr(0,&tinf)<0) return -1;
+  get_proc_info(tproc,tinf);
   return 0;
 }
 int
-sys_set_prio(int pid)
+sys_set_prio(void)
 {
   return 0;
 }
 int
-sys_get_prio(int pid)
+sys_get_prio(void)
 {
   return 0;
 }
