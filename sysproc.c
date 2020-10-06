@@ -89,3 +89,26 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_hello(void)
+{
+  cprintf("Helloxv6\n");
+  return 0;
+}
+
+int
+sys_hello_name(const char* name)
+{
+  if(!name) return -1;
+  cprintf("hello %s\n",name);
+  return 0;
+}
+
+/*TODO:
+sys_get_num_proc
+sys_get_max_pid
+sys_get_proc_info
+sys_set_prio
+sys_get_prio
+*/
