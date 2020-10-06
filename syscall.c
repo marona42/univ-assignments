@@ -103,6 +103,13 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+extern int sys_hello(void);
+extern int sys_hello_name(void);
+extern int sys_get_num_proc(void);
+extern int sys_get_max_pid(void);
+extern int sys_get_proc_info(void);
+extern int sys_set_prio(void);
+extern int sys_get_prio(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -126,6 +133,14 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_hello]         sys_hello,
+[SYS_hello_name]    sys_hello_name,
+[SYS_get_num_proc]  sys_get_num_proc,
+[SYS_get_max_pid]   sys_get_max_pid,
+[SYS_get_proc_info] sys_get_proc_info,
+[SYS_set_prio]      sys_set_prio,
+[SYS_get_prio]      sys_get_prio
+
 };
 
 void
