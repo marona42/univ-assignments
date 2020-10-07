@@ -324,7 +324,7 @@ wait(void)
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
 void
-scheduler(void)
+scheduler(void) //TODO:
 {
   struct proc *p;
   struct cpu *c = mycpu();
@@ -336,8 +336,8 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //FIXME: RR 스케쥴 + 우선순위
+      if(p->state != RUNNABLE)                          //테이블 차원을 하나 늘려서, 우선순위에 따라 들어가게끔.
         continue;
 
       // Switch to chosen process.  It is the process's job
@@ -605,17 +605,18 @@ int set_prio(int tprio)
   release(&ptable.lock);
   return 0;
 }
-int get_prio(int tid)
+int get_prio()
 {
   struct proc *p;
+  int prio;
   acquire(&ptable.lock);
-
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->pid == tid && p->state!=UNUSED)
-    {
-      release(&ptable.lock);
-      return p->prior;
-    }
+  //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  //  if(p->pid == tid && p->state!=UNUSED)
+  //  {
+  //    release(&ptable.lock);
+  //    return p->prior;
+  //  }
+  prio=myproc()->prior;
   release(&ptable.lock);
-  return -1;
+  return prio;
 }
