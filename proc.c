@@ -315,6 +315,48 @@ wait(void)
   }
 }
 
+int gcd(int a,int b)  //greatest common divisor
+{
+  return b?gcd(b,a%b):a;
+}
+
+//build process table for priority based Round-Robin
+/*
+적을수록 높음
+0~100까지 해놓고
+기본 50,
+100*프로세스수-프로세스의 우선도합
+=프로세스 변환모수
+프로세스 우선도의 gcd를 구해 변환모수/gcd+프로세스수 =>테이블크기
+각 프로세스의 한 라운드에: 100-프로세스우선도/gcd번 삽입 + 기본 한번씩
+
+100 50 50 0
+0 50 50 100 = 200 : 50 테이블 크기 : 4
+0 1 1 2 + 기본 한번씩
+*/
+void
+build_table(void)
+{
+  struct proc *prtable;
+  int priors[NPROC]={0},priorsum=0,pidx,pgcd=1,tsize=1;
+  struct proc *p;
+  acquire(&ptable.lock);
+  for(p = ptable.proc,pidx=0; p < &ptable.proc[NPROC]; p++,pidx++)
+  { //READ proc's priority and caculate tablesize
+    if(p->state!=UNUSED)
+    {
+      priors[pidx]=p->prior;
+      if(!priorsum) pgcd=MINPRIO-p->prior;  //first prior = first pgcd
+      else pgcd=gcd(pgcd,MINPRIO-p->prior); //전체 prior의 gcd
+      priorsum+=MINPRIO-p->prior;
+    }
+    else
+      priors[pidx]=-1;  //FOR UNUSED PROC 
+  }
+  release(&ptable.lock);
+  prtable=malloc(sizeof(p)*NPROC*tsize);  //FIXME: tsize 식 완성
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -332,8 +374,8 @@ scheduler(void) //TODO:
   
   for(;;){
     // Enable interrupts on this processor.
-    sti();
-
+    sti();  //set interrupt flag
+    build_table();
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //FIXME: RR 스케쥴 + 우선순위
@@ -590,7 +632,7 @@ int get_proc_info(int tpid,struct processInfo *tstat)
 
   if(p->state == UNUSED) return 0;
   tstat->pid=tpid;
-  tstat->ppid=p->parent?p->parent->pid:0;
+  tstat->ppid=p->parent?p->parent->pid:0; //handle when ppid=0
   tstat->psize=p->sz;
   tstat->numberContextSwitches=p->ncs;
 
