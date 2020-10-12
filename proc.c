@@ -12,7 +12,7 @@ struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
-struct proc *prtable[NPROC*MINPRIO]={0};
+struct proc *prtable[NPROC*MAXPRIO]={0};
 int tsize=1;  //current size of prtable
 static struct proc *initproc;
 
@@ -324,12 +324,12 @@ int gcd(int a,int b)  //greatest common divisor
 //build process table for priority based Round-Robin
 /*
 적을수록 높음
-0~100까지 해놓고
-기본 50,
+0~1000까지 해놓고
+기본 500,
 100*프로세스수-프로세스의 우선도합
 =프로세스 변환모수
 프로세스 우선도의 gcd를 구해 
-각 프로세스의 한 라운드에: 100-프로세스우선도/gcd번 삽입 + 기본 한번씩
+각 프로세스의 한 라운드에: 프로세스우선도/gcd번 삽입 + 기본 한번씩
 
 100 50 50 0
 0 50 50 100 = 200 : 50 테이블 크기 : 4
@@ -338,30 +338,29 @@ int gcd(int a,int b)  //greatest common divisor
 void
 build_table(void)
 {
-//  struct proc *prtable;
-  int priors[NPROC]={0},priorsum=0,pidx,pgcd=1,prtsize=0,pnum;
+  int priors[NPROC]={0},priorsum=0,pidx,pgcd=0,prtsize=0,pnum;
   struct proc *p;
+  pnum=get_num_proc();
   acquire(&ptable.lock);
   for(p = ptable.proc,pidx=0; p < &ptable.proc[NPROC]; p++,pidx++)
   { //READ proc's priority and calculate tablesize
     if(p->state!=UNUSED)
     {
       priors[pidx]=p->prior;
-      if(!priorsum) pgcd=MINPRIO-p->prior;  //first prior = first pgcd
-      else pgcd=gcd(pgcd,MINPRIO-p->prior); //전체 prior의 gcd
-      priorsum+=MINPRIO-p->prior;
+      priorsum+=p->prior;
+      if(!pgcd) pgcd=p->prior;  //first prior = first pgcd
+      else pgcd=gcd(pgcd,p->prior); //전체 prior의 gcd
+      //cprintf("%d ",p->prior);
     }
     else
       priors[pidx]=-1;  //FOR UNUSED PROC 
   }
-  release(&ptable.lock); 
-  pnum=get_num_proc();
-  tsize=priorsum/pgcd+pnum;     //변환모수/gcd+프로세스수 =>테이블크기
-  
-  for(int i=0;i<NPROC;i++)  priors[i]/=pgcd;  //보너스 수행수 계산
+  if(!pgcd) tsize=pnum;
+  else tsize=priorsum/pgcd+pnum;     //변환모수/gcd+프로세스수 =>테이블크기
+  if(pgcd) for(int i=0;i<NPROC;i++)  priors[i]/=pgcd;  //보너스 수행수 계산
+  else for(int i=0;i<NPROC;i++)  priors[i]=priors[i]?1:0;  //보너스 수행수 계산
   
   pidx=prtsize=0;
-  acquire(&ptable.lock);
   while(prtsize<tsize)
   {
     if(priors[pidx]>=0)
@@ -386,7 +385,7 @@ scheduler(void) //TODO:
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  int prr=0;
+  //int prr=0;
   c->proc = 0;
   
   for(;;){
@@ -395,9 +394,9 @@ scheduler(void) //TODO:
     build_table();
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //TODO: 원본 RR
-    for(prr = 0; prr < tsize; prr++){ //FIXME: RR 스케쥴 + 우선순위
-      p=prtable[prr];
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //TODO: 원본 RR
+    //for(prr = 0; prr < tsize; prr++){ //FIXME: RR 스케쥴 + 우선순위
+    //  p=prtable[prr];
       if(p->state != RUNNABLE)
         continue;
 
@@ -660,6 +659,8 @@ int get_proc_info(int tpid,struct processInfo *tstat)
 
 int set_prio(int tprio)
 {
+  if(tprio>MAXPRIO) tprio=MAXPRIO;
+  else if(tprio <= 0)  tprio=1;
   acquire(&ptable.lock);
   myproc()->prior=tprio;
   release(&ptable.lock);

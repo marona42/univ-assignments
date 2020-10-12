@@ -33,8 +33,8 @@ struct context {
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
-#define INITPRIO 50
-#define MINPRIO 100
+#define INITPRIO 500
+#define MAXPRIO 1000
 
 // Per-process state
 struct proc {
