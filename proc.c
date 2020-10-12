@@ -385,7 +385,7 @@ scheduler(void) //TODO:
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  //int prr=0;
+  int prr=0;
   c->proc = 0;
   
   for(;;){
@@ -394,9 +394,9 @@ scheduler(void) //TODO:
     build_table();
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //TODO: 원본 RR
-    //for(prr = 0; prr < tsize; prr++){ //FIXME: RR 스케쥴 + 우선순위
-    //  p=prtable[prr];
+    //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //TODO: 원본 RR
+    for(prr = 0; prr < tsize; prr++){ //FIXME: RR 스케쥴 + 우선순위
+      p=prtable[prr];
       if(p->state != RUNNABLE)
         continue;
 
