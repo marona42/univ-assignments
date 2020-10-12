@@ -12,7 +12,8 @@ struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
-
+struct proc *prtable[NPROC*MINPRIO]={0};
+int tsize=1;  //current size of prtable
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -327,7 +328,7 @@ int gcd(int a,int b)  //greatest common divisor
 기본 50,
 100*프로세스수-프로세스의 우선도합
 =프로세스 변환모수
-프로세스 우선도의 gcd를 구해 변환모수/gcd+프로세스수 =>테이블크기
+프로세스 우선도의 gcd를 구해 
 각 프로세스의 한 라운드에: 100-프로세스우선도/gcd번 삽입 + 기본 한번씩
 
 100 50 50 0
@@ -337,12 +338,12 @@ int gcd(int a,int b)  //greatest common divisor
 void
 build_table(void)
 {
-  struct proc *prtable;
-  int priors[NPROC]={0},priorsum=0,pidx,pgcd=1,tsize=1;
+//  struct proc *prtable;
+  int priors[NPROC]={0},priorsum=0,pidx,pgcd=1,prtsize=0,pnum;
   struct proc *p;
   acquire(&ptable.lock);
   for(p = ptable.proc,pidx=0; p < &ptable.proc[NPROC]; p++,pidx++)
-  { //READ proc's priority and caculate tablesize
+  { //READ proc's priority and calculate tablesize
     if(p->state!=UNUSED)
     {
       priors[pidx]=p->prior;
@@ -353,8 +354,23 @@ build_table(void)
     else
       priors[pidx]=-1;  //FOR UNUSED PROC 
   }
+  release(&ptable.lock); 
+  pnum=get_num_proc();
+  tsize=priorsum/pgcd+pnum;     //변환모수/gcd+프로세스수 =>테이블크기
+  
+  for(int i=0;i<NPROC;i++)  priors[i]/=pgcd;  //보너스 수행수 계산
+  
+  pidx=prtsize=0;
+  acquire(&ptable.lock);
+  while(prtsize<tsize)
+  {
+    if(priors[pidx]>=0)
+    {
+      prtable[prtsize++]=&ptable.proc[pidx];  priors[pidx]--;
+    }
+    pidx=(pidx+1)%NPROC;
+  }
   release(&ptable.lock);
-  prtable=malloc(sizeof(p)*NPROC*tsize);  //FIXME: tsize 식 완성
 }
 
 //PAGEBREAK: 42
@@ -370,6 +386,7 @@ scheduler(void) //TODO:
 {
   struct proc *p;
   struct cpu *c = mycpu();
+  int prr=0;
   c->proc = 0;
   
   for(;;){
@@ -378,8 +395,10 @@ scheduler(void) //TODO:
     build_table();
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //FIXME: RR 스케쥴 + 우선순위
-      if(p->state != RUNNABLE)                          //테이블 차원을 하나 늘려서, 우선순위에 따라 들어가게끔.
+    //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //TODO: 원본 RR
+    for(prr = 0; prr < tsize; prr++){ //FIXME: RR 스케쥴 + 우선순위
+      p=prtable[prr];
+      if(p->state != RUNNABLE)
         continue;
 
       // Switch to chosen process.  It is the process's job
@@ -641,7 +660,6 @@ int get_proc_info(int tpid,struct processInfo *tstat)
 
 int set_prio(int tprio)
 {
-  struct proc *p;
   acquire(&ptable.lock);
   myproc()->prior=tprio;
   release(&ptable.lock);
@@ -649,7 +667,6 @@ int set_prio(int tprio)
 }
 int get_prio()
 {
-  struct proc *p;
   int prio;
   acquire(&ptable.lock);
   //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)

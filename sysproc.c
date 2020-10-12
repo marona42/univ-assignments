@@ -136,7 +136,5 @@ sys_set_prio(void)
 int
 sys_get_prio(void)
 {
-  int tpid;
-  if(argint(0,&tpid)<0) return -1;
-  return get_prio(tpid);
+  return get_prio();
 }
