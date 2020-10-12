@@ -338,10 +338,11 @@ int gcd(int a,int b)  //greatest common divisor
 void
 build_table(void)
 {
-  int priors[NPROC]={0},priorsum=0,pidx,pgcd=0,prtsize=0,pnum;
+  int priors[NPROC]={0},priorsum=0,pidx,pgcd=0,prtsize=0,pnum=0;
   struct proc *p;
-  pnum=get_num_proc();
   acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if(p->state != UNUSED)  pnum++;
   for(p = ptable.proc,pidx=0; p < &ptable.proc[NPROC]; p++,pidx++)
   { //READ proc's priority and calculate tablesize
     if(p->state!=UNUSED)
@@ -350,16 +351,23 @@ build_table(void)
       priorsum+=p->prior;
       if(!pgcd) pgcd=p->prior;  //first prior = first pgcd
       else pgcd=gcd(pgcd,p->prior); //전체 prior의 gcd
-      //cprintf("%d ",p->prior);
     }
     else
       priors[pidx]=-1;  //FOR UNUSED PROC 
   }
   if(!pgcd) tsize=pnum;
   else tsize=priorsum/pgcd+pnum;     //변환모수/gcd+프로세스수 =>테이블크기
-  if(pgcd) for(int i=0;i<NPROC;i++)  priors[i]/=pgcd;  //보너스 수행수 계산
+  if(pgcd) for(int i=0;i<NPROC;i++)  {priors[i]/=pgcd;}  //보너스 수행수 계산
   else for(int i=0;i<NPROC;i++)  priors[i]=priors[i]?1:0;  //보너스 수행수 계산
   
+  //if(pnum>50)
+  //{
+  //cprintf("table gcd: %d, num : %d\n",pgcd,pnum);
+  //for(int i=0;i<NPROC;i++)
+  //  if(priors[i]>0) cprintf("[%d: %d] ",ptable.proc[i].pid,priors[i]);
+  //cprintf("\n");
+  //}
+
   pidx=prtsize=0;
   while(prtsize<tsize)
   {
@@ -369,6 +377,13 @@ build_table(void)
     }
     pidx=(pidx+1)%NPROC;
   }
+  //if(pnum>4)
+  //{
+  //  cprintf("\nprtable[%d*%d+%d=%d]::\n",priorsum,pgcd,pnum,tsize);
+  //  for(int i=0;i<tsize && i<30;i++)
+  //    cprintf("%d ",prtable[i]->pid);
+  //  cprintf("\n");
+  //}
   release(&ptable.lock);
 }
 
@@ -663,7 +678,9 @@ int set_prio(int tprio)
   else if(tprio <= 0)  tprio=1;
   acquire(&ptable.lock);
   myproc()->prior=tprio;
+  //cprintf("set %d -> %d\n",myproc()->pid,tprio);
   release(&ptable.lock);
+  build_table();
   return 0;
 }
 int get_prio()
