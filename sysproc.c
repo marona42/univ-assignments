@@ -105,8 +105,6 @@ sys_hello_name(void)
     return -1;
   return hello_name(name);
 }
-
-/*TODO: implements these syscalls:*/
 int
 sys_get_num_proc(void)
 {

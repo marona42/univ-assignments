@@ -9,9 +9,9 @@ int main(void)
 {
     struct processInfo tbuf;
     int i=0;
-    printf(1,"PID   PPID   SIZE      Number of Context Switch\n");
+    printf(1,"PID\t PPID\t SIZE\t\t Number of Context Switch\n");
     for(i=1;i<64;i++)
         if(get_proc_info(i,&tbuf)>0)
-            printf(1,"%d\t%d\t%d\t%d\n",tbuf.pid,tbuf.ppid,tbuf.psize,tbuf.numberContextSwitches);
+            printf(1,"%d\t %d\t %d\t\t %d\n",tbuf.pid,tbuf.ppid,tbuf.psize,tbuf.numberContextSwitches);
     exit();
 }

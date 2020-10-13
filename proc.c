@@ -330,10 +330,6 @@ int gcd(int a,int b)  //greatest common divisor
 =프로세스 변환모수
 프로세스 우선도의 gcd를 구해 
 각 프로세스의 한 라운드에: 프로세스우선도/gcd번 삽입 + 기본 한번씩
-
-100 50 50 0
-0 50 50 100 = 200 : 50 테이블 크기 : 4
-0 1 1 2 + 기본 한번씩
 */
 void
 build_table(void)
@@ -359,14 +355,6 @@ build_table(void)
   else tsize=priorsum/pgcd+pnum;     //변환모수/gcd+프로세스수 =>테이블크기
   if(pgcd) for(int i=0;i<NPROC;i++)  {priors[i]/=pgcd;}  //보너스 수행수 계산
   else for(int i=0;i<NPROC;i++)  priors[i]=priors[i]?1:0;  //보너스 수행수 계산
-  
-  //if(pnum>50)
-  //{
-  //cprintf("table gcd: %d, num : %d\n",pgcd,pnum);
-  //for(int i=0;i<NPROC;i++)
-  //  if(priors[i]>0) cprintf("[%d: %d] ",ptable.proc[i].pid,priors[i]);
-  //cprintf("\n");
-  //}
 
   pidx=prtsize=0;
   while(prtsize<tsize)
@@ -377,13 +365,6 @@ build_table(void)
     }
     pidx=(pidx+1)%NPROC;
   }
-  //if(pnum>4)
-  //{
-  //  cprintf("\nprtable[%d*%d+%d=%d]::\n",priorsum,pgcd,pnum,tsize);
-  //  for(int i=0;i<tsize && i<30;i++)
-  //    cprintf("%d ",prtable[i]->pid);
-  //  cprintf("\n");
-  //}
   release(&ptable.lock);
 }
 
@@ -396,7 +377,7 @@ build_table(void)
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
 void
-scheduler(void) //TODO:
+scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
@@ -409,8 +390,8 @@ scheduler(void) //TODO:
     build_table();
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ //TODO: 원본 RR
-    for(prr = 0; prr < tsize; prr++){ //FIXME: RR 스케쥴 + 우선순위
+    //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){ // 원본 RR
+    for(prr = 0; prr < tsize; prr++){ //RR 스케쥴 + 우선순위
       p=prtable[prr];
       if(p->state != RUNNABLE)
         continue;
@@ -678,7 +659,6 @@ int set_prio(int tprio)
   else if(tprio <= 0)  tprio=1;
   acquire(&ptable.lock);
   myproc()->prior=tprio;
-  //cprintf("set %d -> %d\n",myproc()->pid,tprio);
   release(&ptable.lock);
   build_table();
   return 0;
@@ -687,12 +667,6 @@ int get_prio()
 {
   int prio;
   acquire(&ptable.lock);
-  //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  //  if(p->pid == tid && p->state!=UNUSED)
-  //  {
-  //    release(&ptable.lock);
-  //    return p->prior;
-  //  }
   prio=myproc()->prior;
   release(&ptable.lock);
   return prio;
