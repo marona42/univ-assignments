@@ -3,9 +3,13 @@
 #include <pthread.h>
 #include <unistd.h>
 
+enum lockstatus{IDLE,READ,WRITE,UNKNOWN=-1};
 struct rw_lock
 {
-
+    pthread_spinlock_t lockpin;
+    enum lockstatus status;
+    int users;
+    int waitings_r,waitings_w;
 };
 
 void init_rwlock(struct rw_lock * rw);
