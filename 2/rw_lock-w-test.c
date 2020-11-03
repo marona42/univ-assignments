@@ -13,11 +13,8 @@ void r_lock(struct rw_lock * rw)  //이전 reading lock 스레드와 동시에 �
   //	Write the code for aquiring read-write lock by the reader.
   if(rw->status <= IDLE)
     rw->status=READ;
-  else if(rw->status >= WRITE)    //이미 write중인 스레드가 존재함. read lock 획득 불가.
-    {rw->waitings_r++; while(rw->status>=WRITE); rw->status=READ; rw->waitings_r--;}
-  else if(rw->waitings_w)         //w 기본설정: 대기중인 w가 있으면 획득 불가.
-    { while(rw->waitings_w) usleep(1000); rw->waitings_r++; while(rw->status > READ || rw->waitings_w); rw->status=READ; rw->waitings_r--;}
-  
+  else if(rw->status >= WRITE || rw->waitings_w)    //이미 write중인 스레드가 존재함. read lock 획득 불가.
+    {rw->waitings_r++; while(rw->waitings_w || rw->status>=WRITE); rw->status=READ; rw->waitings_r--;}
   rw->users++;  //read하는 스레드 수 증가.
 }
 
@@ -34,7 +31,8 @@ void w_lock(struct rw_lock * rw)  //w은 r이 끝날때까지 대기해야함.
   if(rw->status <= IDLE && !rw->waitings_w)
     rw->status=WRITE;
   else                           //이미 lock중인 스레드가 존재함. write lock 획득 불가.
-    {while(rw->waitings_w) usleep(1000); rw->waitings_w++;  while(rw->status > IDLE); rw->status=WRITE; rw->waitings_w--; }
+  { rw->waitings_w++;  while(rw->status > IDLE) usleep(1); rw->status=WRITE; rw->waitings_w--; }
+    //{rw->waitings_w++;  while(1) if(rw->status <= IDLE){rw->waitings_w--; rw->status=WRITE; break;} }
   rw->users++;
 }
 

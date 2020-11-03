@@ -32,7 +32,7 @@ void w_lock(struct rw_lock * rw)  //w은 r이 끝날때까지 대기해야함.
   if(rw->status <= IDLE && !rw->waitings_w)
     rw->status=WRITE;
   else                           //이미 lock중인 스레드가 존재함. write lock 획득 불가.
-    {while(rw->waitings_w) usleep(1000); rw->waitings_w++;  while(rw->status > IDLE); rw->status=WRITE; rw->waitings_w--; }
+    {rw->waitings_w++;  while(rw->status > IDLE) usleep(1); rw->status=WRITE; rw->waitings_w--; }
   rw->users++;
 }
 
