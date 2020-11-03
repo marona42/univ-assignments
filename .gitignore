@@ -16,3 +16,5 @@ mkfs
 .gdbinit
 
 output
+rw_lock-r-test
+rw_lock-w-test
