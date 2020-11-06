@@ -1,4 +1,8 @@
-void main(int argc, char *argv[])
+#include <stdio.h>
+#include <stdlib.h>
+#include "type.h"
+
+int main(int argc, char *argv[])
 { //적당히 고쳐서 사용하세요
     if ((yyin = fopen(argv[argc - 1], "r")) == NULL)
     {
@@ -9,4 +13,6 @@ void main(int argc, char *argv[])
     yyparse();
     if (!syntax_err)
         print_ast(root);
+
+    return 0;
 }

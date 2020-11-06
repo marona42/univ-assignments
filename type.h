@@ -1,10 +1,10 @@
 #define NIL 0
-typedef enum
+typedef enum    //bool 정의
 {
     FALSE,
     TRUE
 } BOOLEAN;
-typedef enum e_node_name
+typedef enum e_node_name    //e 노드 이름 정의
 {
     N_NULL,
     N_PROGRAM,
@@ -66,7 +66,7 @@ typedef enum e_node_name
     N_INIT_LIST_ONE,
     N_INIT_LIST_NIL
 } NODE_NAME;
-typedef enum
+typedef enum    //t_kind: term 종류
 {
     T_NULL,
     T_ENUM,
@@ -76,14 +76,14 @@ typedef enum
     T_FUNC,
     T_POINTER,
     T_VOID
-} T_KIND;
-typedef enum
+} T_KIND;   //term 종류
+typedef enum    //q_kind: 범위?
 {
     Q_NULL,
     Q_CONST,
     Q_VOLATILE
 } Q_KIND;
-typedef enum
+typedef enum    //s_kind: 기억장소
 {
     S_NULL,
     S_AUTO,
@@ -91,8 +91,8 @@ typedef enum
     S_TYPEDEF,
     S_EXTERN,
     S_REGISTER
-} S_KIND;
-typedef enum
+} S_KIND;   //기억장소 명시자
+typedef enum    //id_kind: identifier 종류
 {
     ID_NULL,
     ID_VAR,
@@ -103,18 +103,18 @@ typedef enum
     ID_ENUM,
     ID_STRUCT,
     ID_ENUM_LITERAL
-} ID_KIND;
-typedef struct s_node
+} ID_KIND;  //identifer 종류
+typedef struct s_node   // A_NODE;   //신택스 트리 노드
 {
-    NODE_NAME name;
-    int line;
-    int value;
+    NODE_NAME name;         //노드
+    int line;               //분석중인 줄 번호
+    int value;              // 결과
     struct s_type *type;
     struct s_node *llink;
     struct s_node *clink;
     struct s_node *rlink;
-} A_NODE;
-typedef struct s_type
+} A_NODE;   //신택스 트리 노드
+typedef struct s_type   //A_TYPE;       //타입 테이블(명시자)
 {
     T_KIND kind;
     int size;
@@ -125,8 +125,8 @@ typedef struct s_type
     int line;
     BOOLEAN check;
     BOOLEAN prt;
-} A_TYPE;
-typedef struct s_id
+} A_TYPE;       //타입 테이블(명시자)
+typedef struct s_id //A_ID;     //심볼테이블
 {
     char *name;
     ID_KIND kind;
@@ -137,23 +137,23 @@ typedef struct s_id
     A_NODE *init;
     A_TYPE *type;
     int line;
-    struct s_id *prev;
-    struct s_id *link;
-} A_ID;
-typedef union
+    struct s_id *prev;  //이전 연결된
+    struct s_id *link;  //다음 연결된
+} A_ID;     //심볼테이블
+typedef union   //LIT_VALUE;    //리터럴 값
 {
     int i;
     float f;
     char c;
     char *s;
-} LIT_VALUE;
-typedef struct lit
+} LIT_VALUE;    //리터럴 값
+typedef struct lit  //A_LITERAL;
 {
     int addr;
     A_TYPE *type;
     LIT_VALUE value;
 } A_LITERAL;
-typedef struct
+typedef struct  //A_SPECIFIER;
 {
     A_TYPE *type;
     S_KIND stor;

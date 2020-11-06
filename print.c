@@ -313,85 +313,85 @@ void prt_STRING(char *str, int s)
     print_space(s);
     printf("%s\n", str);
 }
-char
-    *type_kind_name[] = {"NULL", "ENUM", "ARRAY", "STRUCT", "UNION", "FUNC", "POINTER", "V
-                         OID "};
-                         void prt_A_TYPE(A_TYPE *t, int s){print_space(s);
-if (t == int_type)
-    printf("(int)\n");
-else if (t == float_type)
+char *type_kind_name[] = {"NULL", "ENUM", "ARRAY", "STRUCT", "UNION", "FUNC", "POINTER", "VOID"};
+void prt_A_TYPE(A_TYPE *t, int s)
+{
+    print_space(s);
+    if (t == int_type)
+        printf("(int)\n");
+    else if (t == float_type)
 
-    printf("(float)\n");
-else if (t == char_type)
-    printf("(char %d)\n", t->size);
-else if (t == void_type)
-    printf("(void)");
-else if (t->kind == T_NULL)
-    printf("(null)");
-else if (t->prt)
-    printf("(DONE:%x)\n", t);
-else
-    switch (t->kind)
-    {
-    case T_ENUM:
-        t->prt = TRUE;
-        printf("ENUM\n");
-        print_space(s);
-        printf("| ENUMERATORS\n");
-        prt_A_ID_LIST(t->field, s + 2);
-        break;
-    case T_POINTER:
-        t->prt = TRUE;
-        printf("POINTER\n");
-        print_space(s);
-        printf("| ELEMENT_TYPE\n");
-        prt_A_TYPE(t->element_type, s + 2);
-        break;
-    case T_ARRAY:
-        t->prt = TRUE;
-        printf("ARRAY\n");
-        print_space(s);
-        printf("| INDEX\n");
-        if (t->expr)
-            prt_expression(t->expr, s + 2);
-        else
-            print_space(s + 2);
-        printf("(none)\n");
-        print_space(s);
-        printf("| ELEMENT_TYPE\n");
-        prt_A_TYPE(t->element_type, s + 2);
-        break;
-
-    case T_STRUCT:
-        t->prt = TRUE;
-        printf("STRUCT\n");
-        print_space(s);
-        printf("| FIELD\n");
-        prt_A_ID_LIST(t->field, s + 2);
-        break;
-    case T_UNION:
-        t->prt = TRUE;
-        printf("UNION\n");
-        print_space(s);
-        printf("| FIELD\n");
-        prt_A_ID_LIST(t->field, s + 2);
-        break;
-    case T_FUNC:
-        t->prt = TRUE;
-        printf("FUNCTION\n");
-        print_space(s);
-        printf("| PARAMETER\n");
-        prt_A_ID_LIST(t->field, s + 2);
-        print_space(s);
-        printf("| TYPE\n");
-        prt_A_TYPE(t->element_type, s + 2);
-        if (t->expr)
+        printf("(float)\n");
+    else if (t == char_type)
+        printf("(char %d)\n", t->size);
+    else if (t == void_type)
+        printf("(void)");
+    else if (t->kind == T_NULL)
+        printf("(null)");
+    else if (t->prt)
+        printf("(DONE:%x)\n", t);
+    else
+        switch (t->kind)
         {
-            print_space(s);
-            printf("| BODY\n");
-            prt_statement(t->expr, s + 2);
+            case T_ENUM:
+                t->prt = TRUE;
+                printf("ENUM\n");
+                print_space(s);
+                printf("| ENUMERATORS\n");
+                prt_A_ID_LIST(t->field, s + 2);
+                break;
+            case T_POINTER:
+                t->prt = TRUE;
+                printf("POINTER\n");
+                print_space(s);
+                printf("| ELEMENT_TYPE\n");
+                prt_A_TYPE(t->element_type, s + 2);
+                break;
+            case T_ARRAY:
+                t->prt = TRUE;
+                printf("ARRAY\n");
+                print_space(s);
+                printf("| INDEX\n");
+                if (t->expr)
+                    prt_expression(t->expr, s + 2);
+                else
+                    print_space(s + 2);
+                printf("(none)\n");
+                print_space(s);
+                printf("| ELEMENT_TYPE\n");
+                prt_A_TYPE(t->element_type, s + 2);
+                break;
+
+            case T_STRUCT:
+                t->prt = TRUE;
+                printf("STRUCT\n");
+                print_space(s);
+                printf("| FIELD\n");
+                prt_A_ID_LIST(t->field, s + 2);
+                break;
+            case T_UNION:
+                t->prt = TRUE;
+                printf("UNION\n");
+                print_space(s);
+                printf("| FIELD\n");
+                prt_A_ID_LIST(t->field, s + 2);
+                break;
+            case T_FUNC:
+                t->prt = TRUE;
+                printf("FUNCTION\n");
+                print_space(s);
+                printf("| PARAMETER\n");
+                prt_A_ID_LIST(t->field, s + 2);
+                print_space(s);
+                printf("| TYPE\n");
+                prt_A_TYPE(t->element_type, s + 2);
+                if (t->expr)
+                {
+                    print_space(s);
+                    printf("| BODY\n");
+                    prt_statement(t->expr, s + 2);
+                }
         }
-    }
 }
 void prt_A_ID_LIST(A_ID *id, int s)
 {
@@ -401,25 +401,18 @@ void prt_A_ID_LIST(A_ID *id, int s)
         id = id->link;
     }
 }
-char *id_kind_name[] = {"NULL", "VAR", "FUNC", "PARM", "FIELD", "TYPE", "ENUM",
-                        "STRUCT", "ENUM_LITERAL"};
+char *id_kind_name[] = {"NULL", "VAR", "FUNC", "PARM", "FIELD", "TYPE", "ENUM","STRUCT", "ENUM_LITERAL"};
 char *spec_name[] = {"NULL", "AUTO", "STATIC", "TYPEDEF"};
 
 void prt_A_ID_NAME(A_ID *id, int s)
 {
     print_space(s);
-    printf("(ID=\"%s\") TYPE:%x KIND:%s SPEC=%s LEV=%d VAL=%d
-           ADDR = % d \n ", id->name, id->type,id_kind_name[id->kind],
-                  spec_name[id->specifier],
-           id->level, id->value, id->address);
+    printf("(ID=\"%s\") TYPE:%x KIND:%s SPEC=%s LEV=%d VAL=%d ADDR = %d \n", id->name, id->type,id_kind_name[id->kind],spec_name[id->specifier], id->level, id->value, id->address);
 }
 void prt_A_ID(A_ID *id, int s)
 {
     print_space(s);
-    printf("(ID=\"%s\") TYPE:%x KIND:%s SPEC=%s LEV=%d VAL=%d
-           ADDR = % d \n ", id->name, id->type,id_kind_name[id->kind],
-                  spec_name[id->specifier],
-           id->level, id->value, id->address);
+    printf("(ID=\"%s\") TYPE:%x KIND:%s SPEC=%s LEV=%d VAL=%d ADDR = %d\n", id->name, id->type,id_kind_name[id->kind], spec_name[id->specifier], id->level, id->value, id->address);
     if (id->type)
     {
         print_space(s);
