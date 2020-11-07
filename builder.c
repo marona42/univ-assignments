@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "type.h"
 #include "y.tab.h"
 extern char *yytext;
@@ -7,6 +8,13 @@ A_TYPE *int_type, *char_type, *void_type, *float_type, *string_type;
 A_NODE *root;
 A_ID *current_id=NIL;
 int syntax_err=0,line_no=1,current_level=0;
+
+void syntax_error(int i, char *s);
+BOOLEAN isPointerOrArrayType(A_TYPE *t);
+BOOLEAN isNotSameType(A_TYPE *t1,A_TYPE *t2);
+BOOLEAN isNotSameFormalParameters(A_ID *a, A_ID *b);
+
+
 A_NODE *makeNode(NODE_NAME n,A_NODE *a, A_NODE *b, A_NODE *c)
 {
     A_NODE *m;
@@ -56,7 +64,7 @@ A_ID *makeIdentifier(char *s)
     current_id=id;
     return id;
 }
-A_ID *makeDummyIdentifier(char *s)
+A_ID *makeDummyIdentifier()
 {
     A_ID *id;
     id = malloc(sizeof(A_ID));
@@ -291,13 +299,6 @@ A_ID *setStructDeclaratorListSpecifier(A_ID *id, A_TYPE *t)
     }
     return id;
 }
-A_TYPE *setTypeNameSpecifier(A_TYPE *t,A_SPECIFIER *p)
-{
-    if(p->stor) syntax_error(20,NULL);
-    setDefaultSpecifier(p);
-    t=setTypeElementType(t,p->type);
-    return t;
-}
 A_TYPE *setTypeElementType(A_TYPE *t, A_TYPE *s)
 {
     A_TYPE *q;
@@ -305,6 +306,13 @@ A_TYPE *setTypeElementType(A_TYPE *t, A_TYPE *s)
     q=t;
     while(q->element_type) q=q->element_type;
     q->element_type=s;
+    return t;
+}
+A_TYPE *setTypeNameSpecifier(A_TYPE *t,A_SPECIFIER *p)
+{
+    if(p->stor) syntax_error(20,NULL);
+    setDefaultSpecifier(p);
+    t=setTypeElementType(t,p->type);
     return t;
 }
 A_TYPE *setTypeField(A_TYPE *t, A_ID *n)
@@ -336,6 +344,16 @@ A_TYPE *setTypeAndKindOfDeclarator(A_TYPE *t,ID_KIND k,A_ID *id)
     id->kind=k;
     return t;
 }
+BOOLEAN isPointerOrArrayType(A_TYPE *t)
+{
+    if(t->element_type) return TRUE;
+    else return FALSE;
+}
+BOOLEAN isNotSameType(A_TYPE *t1,A_TYPE *t2)
+{
+    if(isPointerOrArrayType(t1) || isPointerOrArrayType(t2)) return isNotSameType(t1->element_type,t2->element_type);
+    else return (t1!=t2);
+}
 BOOLEAN isNotSameFormalParameters(A_ID *a, A_ID *b)
 {
     if(a==NIL) return FALSE;
@@ -346,16 +364,6 @@ BOOLEAN isNotSameFormalParameters(A_ID *a, A_ID *b)
         b=b->link;
     }
     if(b) return TRUE;
-    else return FALSE;
-}
-BOOLEAN isNotSameType(A_TYPE *t1,A_TYPE *t2)
-{
-    if(isPointerOrArrayType(t1) || isPointerOrArrayType(t2)) return isNotSameType(t1->element_type,t2->element_type);
-    else return (t1!=t2);
-}
-BOOLEAN isPointerOrArrayType(A_TYPE *t)
-{
-    if(t->element_type) return TRUE;
     else return FALSE;
 }
 void initialize()
