@@ -4,9 +4,14 @@ delim   [\t]
 line    [\n]
 ws      {delim}+
 %{
+//ifndef YYSTYPE_IS_DECLARED
+//   #define YYSTYPE_IS_DECLARED 1
+//   typedef long YYSTYPE;
+//endif
     #include "y.tab.h"
-    extern int yylval;
-    int line_no=1;
+    extern YYSTYPE yylval;
+    extern int line_no;
+    line_no=1;
     char *makeString();
     int checkIdentifier();
 %}

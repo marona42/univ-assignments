@@ -196,7 +196,7 @@ A_ID *setDeclaratorInit(A_ID *id, A_NODE *n)
     id->init = n;
     return id;
 }
-A_ID *setDeclaratorKind(A_ID *id,ID_KIND k)
+A_ID *setDeclaratorKind(A_ID *id, ID_KIND k)
 {
     A_ID *a;
     a=searchIdentifierAtCurrentLevel(id->name,id->prev);

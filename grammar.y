@@ -1,14 +1,19 @@
 %{
-    //#include "y.tab.h"
+#ifndef YYSTYPE_IS_DECLARED
+    #define YYSTYPE_IS_DECLARED 1
+    typedef long YYSTYPE;
+#endif
+    #include "y.tab.h"
     #include <stdio.h>
-    #include "type.h"
-    extern int line_no, syntax_err,current_level;
+    #include "builder.h"
+    extern int line_no, syntax_err, current_level;
     extern A_NODE *root;
     extern A_ID *current_id;
     extern A_TYPE *int_type;
 
     int yyerror();
     int yylex();
+    FILE *yyin;
 %}
 %start program
 %token INTEGER_CONSTANT FLOAT_CONSTANT CHARACTER_CONSTANT STRING_LITERAL
@@ -18,18 +23,19 @@
 /*     ++ -- -> > < >= <= == != && || *** ( ) [ ] { } : . , ! * / % & + - = ; / */ 
 //%union {A_NODE NODE;}
 //%type <NODE> struct_specifier
+
 %%
 program
     : translation_unit
     { root=makeNode(N_PROGRAM,NIL,$1,NIL);   checkForwardReference(); }
 ;
 translation_unit
-    : external_declaration
-    | translation_unit external_declaration
+    : external_declaration  {$$=$1;}
+    | translation_unit external_declaration {$$=linkDeclaratorList($1,$2);}
 ;
 external_declaration
-    : function_definition
-    | declaration
+    : function_definition   {$$=$1;}
+    | declaration           {$$=$1;}
 ;
 function_definition
     : declaration_specifiers declarator { $$ = setFunctionDeclaratorSpecifier($2,$1);} compound_statement {$$=setFunctionDeclaratorBody($3,$4);}
@@ -44,7 +50,7 @@ declaration_list
     | declaration_list declaration  {$$=linkDeclaratorList($1,$2);}
     ;
 declaration
-    : declaration_specifiers init_declarator_list_opt SEMCOLON {$$=setDeclaratorListSpecifer($2,$2); }
+    : declaration_specifiers init_declarator_list_opt SEMCOLON {$$=setDeclaratorListSpecifier($2,$2); }
     ;
 declaration_specifiers
     : type_specifier        {$$=makeSpecifier($1,0);}
@@ -155,7 +161,7 @@ abstract_declarator
     ;
 direct_abstract_declarator
     : LPAR abstract_declarator RPAR {$$=$2;}
-    | LLPAR constant_expression_opt RLPAR   {$$=setTypeExpr(makeType(T_ARRAY,$2);}
+    | LLPAR constant_expression_opt RLPAR   {$$=setTypeExpr(makeType(T_ARRAY),$2);}
     | LPAR parameter_type_list_opt RPAR {$$=setTypeExpr(makeType(T_FUNC),$2);}
     | direct_abstract_declarator LLPAR constant_expression_opt RLPAR    {$$=setTypeElementType($1,setTypeExpr(makeType(T_ARRAY),$3));}
     | direct_abstract_declarator LPAR parameter_type_list_opt RPAR      {$$=setTypeElementType($1,setTypeExpr(makeType(T_FUNC),$3));}
@@ -178,10 +184,10 @@ statement
     ;
 labeled_statement
     : CASE_SYM constant_expression COLON statement {$$=makeNode(N_STMT_LABEL_CASE,$2,NIL,$4);}
-    | DEFAULT_SYM COLON statement   {$$=makeNode(N_STMT_LABEL,DEFAULT,NIL,$3,NIL);}
+    | DEFAULT_SYM COLON statement   {$$=makeNode(N_STMT_LABEL_DEFAULT,NIL,$3,NIL);}
     ;
 statement_list
-    : statement {$$=makeNode(N_STMT_LIST,$1,NIL,makeNode(N_STMT_LIST_NIL,NIL,NIL,NIL);}
+    : statement {$$=makeNode(N_STMT_LIST,$1,NIL,makeNode(N_STMT_LIST_NIL,NIL,NIL,NIL));}
     | statement_list statement {$$=makeNodeList(N_STMT_LIST,$1,$2);}
     ;
 compound_statement
@@ -308,25 +314,13 @@ assignment_expression
     ;
 %%
 extern char *yytext;
-A_ID *makeIdentifier(char *s)
-{
-    A_ID *id;
-    id=malloc(sizeof(A_ID));
-    id->name=s;
-    id->level=current_level;
-    id->prev=current_id;
-    id->link=NULL;
-    current_level=id;
-    line = line_no;
-    return id;
-}
 int yyerror(const char *s) {fprintf(stderr,"line %d: %s near '%s'\n",line_no,s,yytext);}
 int main(int argc, char *argv[])
 {
     if ((yyin = fopen(argv[argc - 1], "r")) == NULL)
     {
         printf("can not open input file: %s\n", argv[argc - 1]);
-        exit(1);
+        return 1;
     }
     initialize();
     yyparse();
