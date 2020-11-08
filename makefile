@@ -13,7 +13,7 @@ print.o: print.c type.h
 	gcc -c print.c
 
 y.tab.c: grammar.y type.h
-	yacc -d grammar.y
+	yacc -d grammar.y -Wno-yacc
 
 
 clean:
