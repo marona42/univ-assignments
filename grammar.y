@@ -1,9 +1,8 @@
 %{
-#ifndef YYSTYPE_IS_DECLARED
-    #define YYSTYPE_IS_DECLARED 1
-    typedef long YYSTYPE;
-#endif
-    #include "y.tab.h"
+//#ifndef YYSTYPE_IS_DECLARED
+//    #define YYSTYPE_IS_DECLARED 1
+//    typedef long YYSTYPE;
+//#endif
     #include <stdio.h>
     #include "builder.h"
     extern int line_no, syntax_err, current_level;
@@ -16,13 +15,16 @@
     FILE *yyin;
 %}
 %start program
-%token INTEGER_CONSTANT FLOAT_CONSTANT CHARACTER_CONSTANT STRING_LITERAL
-%token IDENTIFIER TYPE_IDENTIFIER AUTO_SYM BREAK_SYM CASE_SYM CONTINUE_SYM DEFAULT_SYM DO_SYM ELSE_SYM ENUM_SYM FOR_SYM IF_SYM RETURN_SYM SIZEOF_SYM STATIC_SYM STRUCT_SYM SWITCH_SYM TYPEDEF_SYM UNION_SYM WHILE_SYM
-%token INT_TYPE FLOAT_TYPE CHAR_TYPE VOID_TYPE
-%token PPLUS MMINUS ARROW GREAT LESS GREATEQ LESSEQ EQU NEQ AAND OOR PPPOINT LPAR RPAR LLPAR RLPAR LMPAR RMPAR COLON POINT COMMA EXC STAR DIV PER AND PLUS MINUS ASSIGN SEMCOLON SLASH
+%union {int num; char *str; A_NODE *node;A_TYPE *typet; A_ID idt; A_SPECIFIER spect;}
+%token <num> INTEGER_CONSTANT FLOAT_CONSTANT CHARACTER_CONSTANT STRING_LITERAL
+%token <num> IDENTIFIER TYPE_IDENTIFIER AUTO_SYM BREAK_SYM CASE_SYM CONTINUE_SYM DEFAULT_SYM DO_SYM ELSE_SYM ENUM_SYM FOR_SYM IF_SYM RETURN_SYM SIZEOF_SYM STATIC_SYM STRUCT_SYM SWITCH_SYM TYPEDEF_SYM UNION_SYM WHILE_SYM
+//%token INT_TYPE FLOAT_TYPE CHAR_TYPE VOID_TYPE
+%token <num> PPLUS MMINUS ARROW GREAT LESS GREATEQ LESSEQ EQU NEQ AAND OOR PPPOINT LPAR RPAR LLPAR RLPAR LMPAR RMPAR COLON POINT COMMA EXC STAR DIV PER AND PLUS MINUS ASSIGN SEMCOLON SLASH
 /*     ++ -- -> > < >= <= == != && || *** ( ) [ ] { } : . , ! * / % & + - = ; / */ 
-//%union {A_NODE NODE;}
-//%type <NODE> struct_specifier
+%type <node> initializer initializer_list statement_list_opt statement_list statement labeled_statement compound_statement expression_statement selection_statement iteration_statement jump_statement for_expression arg_expression_list constant_expression constant_expression_opt expression assignment_expression logical_and_expression logical_or_expression equality_expression relational_expression additive_expression multiplicative_expression cast_expression unary_expression postfix_expression primary_expression expression_opt arg_expression_list_opt
+%type <idt> translation_unit external_declaration function_definition declaration_list_opt declaration_list declaration declaration_specifiers init_declarator_list_opt init_declarator_list init_declarator struct_declaration_list struct_declaration struct_declarator_list struct_declarator enumerator_list enumerator declarator direct_declarator parameter_type_list_opt parameter_type_list parameter_list parameter_declaration 
+%type <typet> struct_type_specifier enum_type_specifier pointer abstract_declarator direct_abstract_declarator type_name type_specifier abstract_declarator_opt
+%type <num> storage_class_specifier struct_or_union
 
 %%
 program
