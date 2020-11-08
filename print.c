@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "type.h"
 char *node_name[] = {
     "N_NULL",

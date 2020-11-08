@@ -7,8 +7,8 @@ extern char *yytext;
 A_TYPE *int_type, *char_type, *void_type, *float_type, *string_type;
 A_NODE *root;
 A_ID *current_id=NIL;
-int syntax_err=0,line_no=1,current_level=0;
-
+int syntax_err=0,current_level=0;
+extern int line_no;
 void syntax_error(int i, char *s);
 BOOLEAN isPointerOrArrayType(A_TYPE *t);
 BOOLEAN isNotSameType(A_TYPE *t1,A_TYPE *t2);
