@@ -8,10 +8,11 @@ ws      {delim}+
 //   #define YYSTYPE_IS_DECLARED 1
 //   typedef long YYSTYPE;
 //endif
+    #include "type.h"
     #include "y.tab.h"
     extern YYSTYPE yylval;
-    extern int line_no;
-    line_no=1;
+    int line_no=1;
+    extern A_ID *current_id;
     char *makeString();
     int checkIdentifier();
 %}
@@ -70,12 +71,11 @@ while       {return(WHILE_SYM);}
 "\("        {return(LPAR);}
 "\)"        {return(RPAR);}
 "\="        {return(EQU);}
-{digit}+                        { yylval = atoi(yytext);        return(INTEGER_CONSTANT);}
-{digit}+\.{digit}+              { return(FLOAT_CONSTANT);}    //yylval = makeString(yytext);
+{digit}+                        { yylval.num = atoi(yytext);        return(INTEGER_CONSTANT);}
+{digit}+\.{digit}+              { yylval.str = makeString(yytext); return(FLOAT_CONSTANT);}
 {letter}({letter}|{digit})*     { return(checkIdentifier(yytext)); }
-\"([^"\n]|\\["\n])*\"           { return(STRING_LITERAL);}    //yylval = makeString(yytext);
-\'([^'\n]|\'\')\'               { yylval = *(yytext+1);         return(CHARACTER_CONSTANT);}
-
+\"([^"\n]|\\["\n])*\"           { yylval.str = makeString(yytext); return(STRING_LITERAL);}
+\'([^'\n]|\'\')\'               { yylval.num = *(yytext+1);         return(CHARACTER_CONSTANT);}
 %%
 
 char *makeString(char *s)
@@ -87,13 +87,19 @@ char *makeString(char *s)
 }
 int checkIdentifier(char *s)
 {
-    if(!strcmp(s,"int"))    { yylval = INT_TYPE;    return(TYPE_IDENTIFIER);}
-    if(!strcmp(s,"float"))  { yylval = FLOAT_TYPE;  return(TYPE_IDENTIFIER);}
-    if(!strcmp(s,"char"))   { yylval = CHAR_TYPE;   return(TYPE_IDENTIFIER);}
-    if(!strcmp(s,"void"))   { yylval = VOID_TYPE;   return(TYPE_IDENTIFIER);}
-
-    //yylval=makeString(s);
-
-    printf("found IDENTIFIER %s\n",s);
-    return(IDENTIFIER);
+    A_ID *id;
+    char *t;
+    id = current_id;
+    while(id)
+    {
+        if(strcmp(id->name,s) == 0) break;
+        id=id->prev;
+    }
+    if(id==0) { yylval.str = makeString(s); return IDENTIFIER; }
+    else if(id->kind == ID_TYPE) { yylval.typet = id->type; return TYPE_IDENTIFIER;}
+    else {yylval.str = id->name; return IDENTIFIER; }
+    //if(!strcmp(s,"int"))    { yylval.num = INT_TYPE;    return(TYPE_IDENTIFIER);}
+    //if(!strcmp(s,"float"))  { yylval.num = FLOAT_TYPE;  return(TYPE_IDENTIFIER);}
+    //if(!strcmp(s,"char"))   { yylval.num = CHAR_TYPE;   return(TYPE_IDENTIFIER);}
+    //if(!strcmp(s,"void"))   { yylval.num = VOID_TYPE;   return(TYPE_IDENTIFIER);}
 }
