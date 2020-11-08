@@ -4,6 +4,7 @@
 //    typedef long YYSTYPE;
 //#endif
     #include <stdio.h>
+    #include "type.h"
     #include "builder.h"
     extern int line_no, syntax_err, current_level;
     extern A_NODE *root;
@@ -15,21 +16,23 @@
     FILE *yyin;
 %}
 %start program
-%union {int num; char *str; A_NODE *node;A_TYPE *typet; A_ID idt; A_SPECIFIER spect;}
+//%code requires { #include "type.h"}
+%union {int num; char *str; A_NODE *node;A_TYPE *typet; A_ID *idt; A_SPECIFIER *spect;}
 %token <num> INTEGER_CONSTANT FLOAT_CONSTANT CHARACTER_CONSTANT STRING_LITERAL
-%token <num> IDENTIFIER TYPE_IDENTIFIER AUTO_SYM BREAK_SYM CASE_SYM CONTINUE_SYM DEFAULT_SYM DO_SYM ELSE_SYM ENUM_SYM FOR_SYM IF_SYM RETURN_SYM SIZEOF_SYM STATIC_SYM STRUCT_SYM SWITCH_SYM TYPEDEF_SYM UNION_SYM WHILE_SYM
+%token <num> TYPE_IDENTIFIER AUTO_SYM BREAK_SYM CASE_SYM CONTINUE_SYM DEFAULT_SYM DO_SYM ELSE_SYM ENUM_SYM FOR_SYM IF_SYM RETURN_SYM SIZEOF_SYM STATIC_SYM STRUCT_SYM SWITCH_SYM TYPEDEF_SYM UNION_SYM WHILE_SYM
+%token <str> IDENTIFIER
 //%token INT_TYPE FLOAT_TYPE CHAR_TYPE VOID_TYPE
 %token <num> PPLUS MMINUS ARROW GREAT LESS GREATEQ LESSEQ EQU NEQ AAND OOR PPPOINT LPAR RPAR LLPAR RLPAR LMPAR RMPAR COLON POINT COMMA EXC STAR DIV PER AND PLUS MINUS ASSIGN SEMCOLON SLASH
 /*     ++ -- -> > < >= <= == != && || *** ( ) [ ] { } : . , ! * / % & + - = ; / */ 
 %type <node> initializer initializer_list statement_list_opt statement_list statement labeled_statement compound_statement expression_statement selection_statement iteration_statement jump_statement for_expression arg_expression_list constant_expression constant_expression_opt expression assignment_expression logical_and_expression logical_or_expression equality_expression relational_expression additive_expression multiplicative_expression cast_expression unary_expression postfix_expression primary_expression expression_opt arg_expression_list_opt
-%type <idt> translation_unit external_declaration function_definition declaration_list_opt declaration_list declaration declaration_specifiers init_declarator_list_opt init_declarator_list init_declarator struct_declaration_list struct_declaration struct_declarator_list struct_declarator enumerator_list enumerator declarator direct_declarator parameter_type_list_opt parameter_type_list parameter_list parameter_declaration 
+%type <idt> translation_unit external_declaration function_definition declaration_list_opt declaration_list declaration init_declarator_list_opt init_declarator_list init_declarator struct_declaration_list struct_declaration struct_declarator_list struct_declarator enumerator_list enumerator declarator direct_declarator parameter_type_list_opt parameter_type_list parameter_list parameter_declaration 
 %type <typet> struct_type_specifier enum_type_specifier pointer abstract_declarator direct_abstract_declarator type_name type_specifier abstract_declarator_opt
 %type <num> storage_class_specifier struct_or_union
-
+%type <spect> declaration_specifiers
 %%
 program
     : translation_unit
-    { root=makeNode(N_PROGRAM,NIL,$1,NIL);   checkForwardReference(); }
+    { root=makeNode(N_PROGRAM,NIL,$1->init,NIL);   checkForwardReference(); }
 ;
 translation_unit
     : external_declaration  {$$=$1;}
@@ -40,8 +43,8 @@ external_declaration
     | declaration           {$$=$1;}
 ;
 function_definition
-    : declaration_specifiers declarator { $$ = setFunctionDeclaratorSpecifier($2,$1);} compound_statement {$$=setFunctionDeclaratorBody($3,$4);}
-    | declarator { $$ = setFunctionDeclaratorSpecifier($1,makeSpecifier(int_type,0));} compound_statement {$$=setFunctionDeclaratorBody($2,$3);}
+    : declaration_specifiers declarator{ $<idt>$ = setFunctionDeclaratorSpecifier($2,$1);} compound_statement {$$=setFunctionDeclaratorBody($<idt>3,$4);}
+    | declarator { $<idt>$ = setFunctionDeclaratorSpecifier($1,makeSpecifier(int_type,0));} compound_statement {$$=setFunctionDeclaratorBody($<idt>2,$3);}
 ;
 declaration_list_opt
     :   {$$=NIL;}
@@ -52,7 +55,7 @@ declaration_list
     | declaration_list declaration  {$$=linkDeclaratorList($1,$2);}
     ;
 declaration
-    : declaration_specifiers init_declarator_list_opt SEMCOLON {$$=setDeclaratorListSpecifier($2,$2); }
+    : declaration_specifiers init_declarator_list_opt SEMCOLON {$$=setDeclaratorListSpecifier($2,$1); }
     ;
 declaration_specifiers
     : type_specifier        {$$=makeSpecifier($1,0);}
@@ -80,11 +83,11 @@ init_declarator
 type_specifier
     : struct_type_specifier      {$$=$1;}
     | enum_type_specifier        {$$=$1;}
-    | TYPE_IDENTIFIER       {$$=$1;}
+    | TYPE_IDENTIFIER       {$$=makeType($1);}  //TODO:
     ;
 struct_type_specifier
-    : struct_or_union IDENTIFIER { $$ = setTypeStructOrEnumIdentifier($1,$2,ID_STRUCT); } LMPAR {$$=current_id; current_level++;} struct_declaration_list RMPAR {checkForwardReference();$$=setTypeField($3,$6); current_level--; current_id=$5;}
-    | struct_or_union {$$=makeType($1);} LMPAR {$$=current_id; current_level++;} struct_declaration_list RMPAR {checkForwardReference(); $$=setTypeField($2,$5); current_level--; current_id=$4;}
+    : struct_or_union IDENTIFIER { $<typet>$ = setTypeStructOrEnumIdentifier($1,$2,ID_STRUCT); } LMPAR {$<idt>$=current_id; current_level++;} struct_declaration_list RMPAR {checkForwardReference();$$=setTypeField($<typet>3,$6); current_level--; current_id=$<idt>5;}
+    | struct_or_union {$<typet>$=makeType($1);} LMPAR {$<idt>$=current_id; current_level++;} struct_declaration_list RMPAR {checkForwardReference(); $<typet>$=setTypeField($<typet>2,$5); current_level--; current_id=$<idt>4;}
     | struct_or_union IDENTIFIER { $$ = getTypeOfStructOrEnumRefIdentifier($1,$2,ID_STRUCT); }
     ;
 struct_or_union
@@ -106,7 +109,7 @@ struct_declarator
     : declarator    {$$=$1;}
     ;
 enum_type_specifier
-    : ENUM_SYM IDENTIFIER {$$=setTypeStructOrEnumIdentifier(T_ENUM,$2,ID_ENUM);}LMPAR enumerator_list RMPAR {$$=setTypeField($3,$5);}
+    : ENUM_SYM IDENTIFIER {$<typet>$=setTypeStructOrEnumIdentifier(T_ENUM,$2,ID_ENUM);}LMPAR enumerator_list RMPAR {$$=setTypeField($<typet>3,$5);}
     | ENUM_SYM LMPAR enumerator_list RMPAR  {$$=makeType(T_ENUM);}
     | ENUM_SYM IDENTIFIER   {$$=getTypeOfStructOrEnumRefIdentifier(T_ENUM,$2,ID_ENUM);}
     ;
@@ -116,7 +119,7 @@ enumerator_list
     ;
 enumerator
     : IDENTIFIER    {$$=setDeclaratorKind(makeIdentifier($1),ID_ENUM_LITERAL);}
-    | IDENTIFIER {$$=setDeclaratorKind(makeIdentifier($1),ID_ENUM_LITERAL);}ASSIGN expression {$$=setDeclaratorInit($2,$4);}
+    | IDENTIFIER {$<idt>$=setDeclaratorKind(makeIdentifier($1),ID_ENUM_LITERAL);}ASSIGN expression {$$=setDeclaratorInit($<idt>2,$4);}
     ;
 declarator
     : pointer direct_declarator     {$$=setDeclaratorElementType($2,$1);}
@@ -130,7 +133,7 @@ direct_declarator
     : IDENTIFIER    {$$=makeIdentifier($1);}
     | LPAR declarator RPAR  {$$=$2;}
     | direct_declarator LLPAR constant_expression_opt RLPAR {$$=setDeclaratorElementType($1,setTypeExpr(makeType(T_ARRAY),$3));}
-    | direct_declarator LPAR {$$=current_id; current_level++;} parameter_type_list_opt RPAR {checkForwardReference(); current_id=$3; current_level--; $$=setDeclaratorElementType($1,setTypeField(makeType(T_FUNC),$4));}
+    | direct_declarator LPAR {$<idt>$=current_id; current_level++;} parameter_type_list_opt RPAR {checkForwardReference(); current_id=$<idt>3; current_level--; $<idt>$=setDeclaratorElementType($1,setTypeField(makeType(T_FUNC),$4));}
     ;
 constant_expression_opt
     :   {$$=NIL;}
@@ -164,9 +167,9 @@ abstract_declarator
 direct_abstract_declarator
     : LPAR abstract_declarator RPAR {$$=$2;}
     | LLPAR constant_expression_opt RLPAR   {$$=setTypeExpr(makeType(T_ARRAY),$2);}
-    | LPAR parameter_type_list_opt RPAR {$$=setTypeExpr(makeType(T_FUNC),$2);}
+    | LPAR parameter_type_list_opt RPAR {$$=setTypeExpr(makeType(T_FUNC),$2->init);}
     | direct_abstract_declarator LLPAR constant_expression_opt RLPAR    {$$=setTypeElementType($1,setTypeExpr(makeType(T_ARRAY),$3));}
-    | direct_abstract_declarator LPAR parameter_type_list_opt RPAR      {$$=setTypeElementType($1,setTypeExpr(makeType(T_FUNC),$3));}
+    | direct_abstract_declarator LPAR parameter_type_list_opt RPAR      {$$=setTypeElementType($1,setTypeExpr(makeType(T_FUNC),$3->init));}
     ;
 initializer
     : constant_expression   {$$=makeNode(N_INIT_LIST_ONE,NIL,$1,NIL);}
@@ -193,7 +196,7 @@ statement_list
     | statement_list statement {$$=makeNodeList(N_STMT_LIST,$1,$2);}
     ;
 compound_statement
-    : LMPAR {$$=current_id; current_level++;} declaration_list_opt statement_list_opt RMPAR {checkForwardReference(); $$=makeNode(N_STMT_COMPOUND,$3,NIL,$4); current_id=$2; current_level--;}
+    : LMPAR {$<idt>$=current_id; current_level++;} declaration_list_opt statement_list_opt RMPAR {checkForwardReference(); $$=makeNode(N_STMT_COMPOUND,$3->init,NIL,$4); current_id=$<idt>2; current_level--;}
     ;
 statement_list_opt
     :   {$$=makeNode(N_STMT_LIST_NIL,NIL,NIL,NIL);}
@@ -227,7 +230,7 @@ jump_statement
     ;
 
 primary_expression
-    : IDENTIFIER        {$$=makeNode(N_EXP_IDENT,NIL,getIdentifierDeclared($1),NIL);}
+    : IDENTIFIER        {$$=makeNode(N_EXP_IDENT,NIL,getIdentifierDeclared($1)->init,NIL);}
     | INTEGER_CONSTANT  {$$=makeNode(N_EXP_INT_CONST,NIL,$1,NIL);}
     | FLOAT_CONSTANT    {$$=makeNode(N_EXP_FLOAT_CONST,NIL,$1,NIL);}
     | CHARACTER_CONSTANT{$$=makeNode(N_EXP_CHAR_CONST,NIL,$1,NIL);}
@@ -262,11 +265,11 @@ unary_expression
     | MINUS cast_expression     {$$=makeNode(N_EXP_MINUS,NIL,$2,NIL);}
     | PLUS cast_expression      {$$=makeNode(N_EXP_PLUS,NIL,$2,NIL);}
     | SIZEOF_SYM unary_expression   {$$=makeNode(N_EXP_SIZE_EXP,NIL,$2,NIL);}
-    | SIZEOF_SYM LPAR type_name RPAR    {$$=makeNode(N_EXP_SIZE_TYPE,NIL,$3,NIL);}
+    | SIZEOF_SYM LPAR type_name RPAR    {$$=makeNode(N_EXP_SIZE_TYPE,NIL,$3->expr,NIL);}
     ;
 cast_expression
     : unary_expression      {$$=$1;}
-    | LPAR type_specifier RPAR cast_expression  {$$=makeNode(N_EXP_CAST,$2,NIL,$4);}
+    | LPAR type_specifier RPAR cast_expression  {$$=makeNode(N_EXP_CAST,$2->expr,NIL,$4);}
     ;
 type_name
     : declaration_specifiers abstract_declarator_opt    {$$=setTypeNameSpecifier($2,$1);}
@@ -315,6 +318,7 @@ assignment_expression
     | unary_expression ASSIGN expression    {$$=makeNode(N_EXP_ASSIGN,$1,NIL,$3);}
     ;
 %%
+#include "print.h"
 extern char *yytext;
 int yyerror(const char *s) {fprintf(stderr,"line %d: %s near '%s'\n",line_no,s,yytext);}
 int main(int argc, char *argv[])
