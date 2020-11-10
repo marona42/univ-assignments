@@ -1,5 +1,5 @@
 #ifndef NIL
-#include "type.h"
+    #include "type.h"
 #endif
 //A_TYPE *int_type, *char_type, *void_type, *float_type, *string_type;
 //A_NODE *root;

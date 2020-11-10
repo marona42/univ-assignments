@@ -1,7 +1,8 @@
 FNAME = mid
 
 $(FNAME) : lex.yy.c y.tab.c y.tab.h builder.c
-	gcc -o $(FNAME) lex.yy.c y.tab.c y.tab.h builder.c print.c
+	#gcc -o $(FNAME) lex.yy.c y.tab.c y.tab.h builder.c print.
+	gcc -o $(FNAME) lex.yy.c y.tab.c y.tab.h builder.c
 
 lex.yy.c: yyparse.l 	y.tab.c
 	lex yyparse.l

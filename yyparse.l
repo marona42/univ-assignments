@@ -8,39 +8,39 @@ ws      {delim}+
 //   #define YYSTYPE_IS_DECLARED 1
 //   typedef long YYSTYPE;
 //endif
-    #include "type.h"
+//    #include "type.h"
     #include "y.tab.h"
     extern YYSTYPE yylval;
     int line_no=1;
     extern A_ID *current_id;
     char *makeString();
     int checkIdentifier();
+//"/*"([^*/]|[^*]"/"|"*"[^/])*"*/"  {}
+//"//"[^\n]*  {}
+//"#"[^\n]*   {}
 %}
 %option noyywrap
 %%
 {ws}        {}
-"/*"([^*/]|[^*]"/"|"*"[^/])*"*/"  {}
-"//"[^\n]*  {}
-"#"[^\n]*   {}
 {line}      {line_no++;} 
-auto        {return(AUTO_SYM);}
-break       {return(BREAK_SYM);}
-case        {return(CASE_SYM);}
-continue    {return(CONTINUE_SYM);}
-default     {return(DEFAULT_SYM);}
-do          {return(DO_SYM);}
-else        {return(ELSE_SYM);}
-enum        {return(ENUM_SYM);}
-for         {return(FOR_SYM);}
-if          {return(IF_SYM);}
-return      {return(RETURN_SYM);}
-sizeof      {return(SIZEOF_SYM);}
-static      {return(STATIC_SYM);}
-struct      {return(STRUCT_SYM);}
-switch      {return(SWITCH_SYM);}
-typedef     {return(TYPEDEF_SYM);}
-union       {return(UNION_SYM);}
-while       {return(WHILE_SYM);}
+"auto"        {return(AUTO_SYM);}
+"break"       {return(BREAK_SYM);}
+"case"        {return(CASE_SYM);}
+"continue"    {return(CONTINUE_SYM);}
+"default"     {return(DEFAULT_SYM);}
+"do"          {return(DO_SYM);}
+"else"        {return(ELSE_SYM);}
+"enum"        {return(ENUM_SYM);}
+"for"         {return(FOR_SYM);}
+"if"          {return(IF_SYM);}
+"return"      {return(RETURN_SYM);}
+"sizeof"      {return(SIZEOF_SYM);}
+"static"      {return(STATIC_SYM);}
+"struct"      {return(STRUCT_SYM);}
+"switch"      {return(SWITCH_SYM);}
+"typedef"     {return(TYPEDEF_SYM);}
+"union"       {return(UNION_SYM);}
+"while"       {return(WHILE_SYM);}
 "\+\+"      {return(PPLUS);}
 "\-\-"      {return(MMINUS);}
 "\->"       {return(ARROW);}
@@ -70,8 +70,8 @@ while       {return(WHILE_SYM);}
 "\*"        {return(STAR);}
 "\("        {return(LPAR);}
 "\)"        {return(RPAR);}
-"\="        {return(EQU);}
-{digit}+                        { yylval.num = atoi(yytext);        return(INTEGER_CONSTANT);}
+"="        {printf("=");return(ASSIGN);}
+{digit}+                        { yylval.num = atoi(yytext); printf("/found int '%s'/",yytext);       return(INTEGER_CONSTANT);}  //TODO: 리터럴값 받기
 {digit}+\.{digit}+              { yylval.str = makeString(yytext); return(FLOAT_CONSTANT);}
 {letter}({letter}|{digit})*     { return(checkIdentifier(yytext)); }
 \"([^"\n]|\\["\n])*\"           { yylval.str = makeString(yytext); return(STRING_LITERAL);}
@@ -87,7 +87,7 @@ char *makeString(char *s)
 }
 int checkIdentifier(char *s)
 {
-    A_ID *id;
+    A_ID *id;       //심볼테이블 이름으로 찾기
     char *t;
     id = current_id;
     while(id)
@@ -95,10 +95,12 @@ int checkIdentifier(char *s)
         if(strcmp(id->name,s) == 0) break;
         id=id->prev;
     }
-    if(id==0) { yylval.str = makeString(s); return IDENTIFIER; }
-    else if(id->kind == ID_TYPE) { yylval.typet = id->type; return TYPE_IDENTIFIER;}
-    else {yylval.str = id->name; return IDENTIFIER; }
-    //if(!strcmp(s,"int"))    { yylval.num = INT_TYPE;    return(TYPE_IDENTIFIER);}
+    if(id==0) { yylval.str = makeString(s); return IDENTIFIER; }    //새 IDENTIFIER
+    else if(id->kind == ID_TYPE) { yylval.typet = id->type; return TYPE_IDENTIFIER;}    //찾아봤는데 자료형 IDENTIFIER
+    else {yylval.str = id->name; return IDENTIFIER; }   //찾아봤는데 이미 있는 IDENTIFIER
+
+
+    //if(!strcmp(s,"int"))    { yylval.num = INT_TYPE;    printf("!int!\n"); return(TYPE_IDENTIFIER);}
     //if(!strcmp(s,"float"))  { yylval.num = FLOAT_TYPE;  return(TYPE_IDENTIFIER);}
     //if(!strcmp(s,"char"))   { yylval.num = CHAR_TYPE;   return(TYPE_IDENTIFIER);}
     //if(!strcmp(s,"void"))   { yylval.num = VOID_TYPE;   return(TYPE_IDENTIFIER);}

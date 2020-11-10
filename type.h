@@ -4,7 +4,7 @@ typedef enum    //bool 정의
     FALSE,
     TRUE
 } BOOLEAN;
-typedef enum e_node_name    //e 노드 이름 정의
+typedef enum e_node_name    //신택스 노드 이름 정의
 {
     N_NULL,
     N_PROGRAM,
@@ -108,7 +108,7 @@ typedef struct s_node   // A_NODE;   //신택스 트리 노드
 {
     NODE_NAME name;         //노드
     int line;               //분석중인 줄 번호
-    int value;              // 결과
+    int value;              // 명령문:지역변수 크기/수식:LVALUE여부.
     struct s_type *type;
     struct s_node *llink;
     struct s_node *clink;

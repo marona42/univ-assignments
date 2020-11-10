@@ -20,12 +20,37 @@ A_NODE *makeNode(NODE_NAME n,A_NODE *a, A_NODE *b, A_NODE *c)
     A_NODE *m;
     m=(A_NODE *)malloc(sizeof(A_NODE));
     m->name=n;
+    switch(n)
+    {
+        //TODO: 리터럴테이블 연결
+        case N_EXP_INT_CONST      : 
+            m->value=1;
+            m->clink=NIL;
+            m->type=int_type;
+            break;
+        case N_EXP_FLOAT_CONST    :
+            m->value=1;
+            m->clink=NIL;
+            m->type=float_type;
+            break;
+        case N_EXP_CHAR_CONST     :
+            m->value=1;
+            m->clink=NIL;
+            m->type=char_type;
+            break;
+        case N_EXP_STRING_LITERAL :
+            m->value=1;
+            m->clink=NIL;
+            m->type=string_type;
+            break;
+        default: 
+            m->clink=b;
+            m->type=NIL;
+            m->value=0;
+    }
     m->llink=a;
-    m->clink=b;
     m->rlink=c;
-    m->type=NIL;
     m->line=line_no;
-    m->value=0;
     return m;
 }
 A_NODE *makeNodeList(NODE_NAME n,A_NODE *a, A_NODE *b)

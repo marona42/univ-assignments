@@ -43,6 +43,12 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 20 "grammar.y"
+
+    #include "builder.h" 
+
+#line 52 "y.tab.h"
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -73,41 +79,37 @@ extern int yydebug;
     TYPEDEF_SYM = 279,
     UNION_SYM = 280,
     WHILE_SYM = 281,
-    INT_TYPE = 282,
-    FLOAT_TYPE = 283,
-    CHAR_TYPE = 284,
-    VOID_TYPE = 285,
-    PPLUS = 286,
-    MMINUS = 287,
-    ARROW = 288,
-    GREAT = 289,
-    LESS = 290,
-    GREATEQ = 291,
-    LESSEQ = 292,
-    EQU = 293,
-    NEQ = 294,
-    AAND = 295,
-    OOR = 296,
-    PPPOINT = 297,
-    LPAR = 298,
-    RPAR = 299,
-    LLPAR = 300,
-    RLPAR = 301,
-    LMPAR = 302,
-    RMPAR = 303,
-    COLON = 304,
-    POINT = 305,
-    COMMA = 306,
-    EXC = 307,
-    STAR = 308,
-    DIV = 309,
-    PER = 310,
-    AND = 311,
-    PLUS = 312,
-    MINUS = 313,
-    ASSIGN = 314,
-    SEMCOLON = 315,
-    SLASH = 316
+    PPLUS = 282,
+    MMINUS = 283,
+    ARROW = 284,
+    GREAT = 285,
+    LESS = 286,
+    GREATEQ = 287,
+    LESSEQ = 288,
+    EQU = 289,
+    NEQ = 290,
+    AAND = 291,
+    OOR = 292,
+    PPPOINT = 293,
+    LPAR = 294,
+    RPAR = 295,
+    LLPAR = 296,
+    RLPAR = 297,
+    LMPAR = 298,
+    RMPAR = 299,
+    COLON = 300,
+    POINT = 301,
+    COMMA = 302,
+    EXC = 303,
+    STAR = 304,
+    DIV = 305,
+    PER = 306,
+    AND = 307,
+    PLUS = 308,
+    MINUS = 309,
+    ASSIGN = 310,
+    SEMCOLON = 311,
+    SLASH = 312
   };
 #endif
 /* Tokens.  */
@@ -135,45 +137,49 @@ extern int yydebug;
 #define TYPEDEF_SYM 279
 #define UNION_SYM 280
 #define WHILE_SYM 281
-#define INT_TYPE 282
-#define FLOAT_TYPE 283
-#define CHAR_TYPE 284
-#define VOID_TYPE 285
-#define PPLUS 286
-#define MMINUS 287
-#define ARROW 288
-#define GREAT 289
-#define LESS 290
-#define GREATEQ 291
-#define LESSEQ 292
-#define EQU 293
-#define NEQ 294
-#define AAND 295
-#define OOR 296
-#define PPPOINT 297
-#define LPAR 298
-#define RPAR 299
-#define LLPAR 300
-#define RLPAR 301
-#define LMPAR 302
-#define RMPAR 303
-#define COLON 304
-#define POINT 305
-#define COMMA 306
-#define EXC 307
-#define STAR 308
-#define DIV 309
-#define PER 310
-#define AND 311
-#define PLUS 312
-#define MINUS 313
-#define ASSIGN 314
-#define SEMCOLON 315
-#define SLASH 316
+#define PPLUS 282
+#define MMINUS 283
+#define ARROW 284
+#define GREAT 285
+#define LESS 286
+#define GREATEQ 287
+#define LESSEQ 288
+#define EQU 289
+#define NEQ 290
+#define AAND 291
+#define OOR 292
+#define PPPOINT 293
+#define LPAR 294
+#define RPAR 295
+#define LLPAR 296
+#define RLPAR 297
+#define LMPAR 298
+#define RMPAR 299
+#define COLON 300
+#define POINT 301
+#define COMMA 302
+#define EXC 303
+#define STAR 304
+#define DIV 305
+#define PER 306
+#define AND 307
+#define PLUS 308
+#define MINUS 309
+#define ASSIGN 310
+#define SEMCOLON 311
+#define SLASH 312
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+union YYSTYPE
+{
+#line 23 "grammar.y"
+int num; char *str; A_NODE *node;A_TYPE *typet; A_ID *idt; A_SPECIFIER *spect;
+
+#line 180 "y.tab.h"
+
+};
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif
