@@ -10,7 +10,18 @@ int ssufs_allocFileHandle() {
 	}
 	return -1;
 }
-
+int ssufs_cntfreeDataBlock(){
+	/*
+		datablock_freelist에서 비어있는 노드의 수를 반환한다.
+	*/
+	int cnt=0;
+	struct superblock_t *superblock = (struct superblock_t *)malloc(sizeof(struct superblock_t));
+	ssufs_readSuperBlock(superblock);
+	for (int i = 0; i < NUM_DATA_BLOCKS; i++)
+		if (superblock->datablock_freelist[i] == DATA_BLOCK_FREE)	cnt++;
+	free(superblock);
+	return cnt;
+}
 int ssufs_create(char *filename){
 	/*1 MEMO: filename으로 파일 생성, inode 할당-반환, 초기화 필요. 동일이름의 파일이 시스템에 존재하지 않아야 함*/
 
@@ -134,11 +145,45 @@ int ssufs_write(int file_handle, char *buf, int nbytes){
 	! 에러 시 리턴 : -1
 	! 주의할 점
 	- 파일의 일부 쓰기는 지원 하지 않음 요청된 모든 수를 파일에 쓰거나 전혀 쓰지 않아야 함
-	- 요청된 nbytes 수를 쓸 수없는 경우 (ex: 요청 된 바이트 수를 쓰면 최대 파일 크기 제한을 초과하거나 쓰기를 완료하는 데 사용할 수 있는 free 디스크 블록이 없는 경우 ) 아무것도 쓰지 않고 에러 리턴해야 함.
+	- 요청된 nbytes 수를 쓸 수없는 경우:
+		(ex: 요청 된 바이트 수를 쓰면 최대 파일 크기 제한을 초과하거나 쓰기를 완료하는 데 사용할 수 있는 free 디스크 블록이 없는 경우 ) 아무것도 쓰지 않고 에러 리턴해야 함.
 	- 쓰기가 실퍠한 경우 실패가 발생하기 전에 할당 된 모든 데이터 블록을 해제하고 해당 블록은 파일시스템에 반환해야 함. -> 실패한 쓰기는 파일시스템이 시작된 상태와 동일한 상태를 유지
 	- 쓰기가 블록 경계에서 정렬되지 않고 블록 중간에서 시작하거나 끝날 수 있는 경우 반드시 처리
 	- 쓰기가 성공하면 fd의 오프셋 값도 갱신해야 함
 	*/
+	struct inode_t *tmp = (struct inode_t *) malloc(sizeof(struct inode_t));
+	char bbuf[BLOCKSIZE]="",obuf[BLOCKSIZE];
+	ssufs_readInode(file_handle_array[file_handle].inode_number, tmp);
+	int soffset=file_handle_array[file_handle].offset,eoffset=soffset+nbytes,coffset=soffset;
+	//TODO: 바이트 수 체크, 필요 블럭 체크.
+	//		쓰기 실패시 모든 블럭 해제
+	//		오프셋이 블럭 중간일 수도 있음.
+	int blkoffset,byteoffset,bufoffset=0;
+	if(eoffset>=MAX_FILE_SIZE*BLOCKSIZE) {free(tmp);	return -1;}	//최대파일크기제한 초과
+	if(((eoffset+BLOCKSIZE/2)/BLOCKSIZE-(tmp->file_size+BLOCKSIZE/2)/BLOCKSIZE) > ssufs_cntfreeDataBlock())
+		{free(tmp);	return -1;}	//블럭 체크:: 필요한 블럭 > 남은블럭 인 경우 쓰기 안함
+
+	blkoffset=tmp->direct_blocks[soffset/BLOCKSIZE];	//오프셋이 있는 블럭
+
+	ssufs_readDataBlock(blkoffset,obuf);
+	for(byteoffset=0;byteoffset<soffset%BLOCKSIZE;byteoffset++)
+		bbuf[byteoffset]=obuf[byteoffset];		//오프셋 전까지 원본 블럭 복사
+	for(byteoffset=soffset%BLOCKSIZE;byteoffset<BLOCKSIZE && coffset<eoffset;byteoffset++)
+		bbuf[byteoffset]=buf[bufoffset++];	coffset++;		//내용을 블럭에 복사
+	ssufs_writeDataBlock(blkoffset,bbuf);
+	while(coffset<eoffset)	//첫블럭 이후
+	{
+		memset(bbuf,0,sizeof(bbuf));
+		if(tmp->direct_blocks[coffset/BLOCKSIZE] < 0)	{blkoffset=ssufs_allocDataBlock();	tmp->direct_blocks[coffset/BLOCKSIZE]=blkoffset;}	//새 블럭 할당
+		else blkoffset=tmp->direct_blocks[coffset/BLOCKSIZE];
+		for(byteoffset=0;byteoffset<BLOCKSIZE && coffset<eoffset;byteoffset++)
+			bbuf[byteoffset]=buf[bufoffset++];	coffset++;		//내용을 블럭에 복사
+		ssufs_writeDataBlock(blkoffset,bbuf);
+	}
+
+	file_handle_array[file_handle].offset=coffset;
+	free(tmp);
+	return 0;
 }
 
 int ssufs_lseek(int file_handle, int nseek){
