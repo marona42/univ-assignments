@@ -10,22 +10,10 @@ int ssufs_allocFileHandle() {
 	}
 	return -1;
 }
-int ssufs_cntfreeDataBlock(){
-	/*
-		datablock_freelist에서 비어있는 노드의 수를 반환한다.
-	*/
-	int cnt=0;
-	struct superblock_t *superblock = (struct superblock_t *)malloc(sizeof(struct superblock_t));
-	ssufs_readSuperBlock(superblock);
-	for (int i = 0; i < NUM_DATA_BLOCKS; i++)
-		if (superblock->datablock_freelist[i] == DATA_BLOCK_FREE)	cnt++;
-	free(superblock);
-	return cnt;
-}
+
 int ssufs_create(char *filename){
 	/*1 MEMO: filename으로 파일 생성, inode 할당-반환, 초기화 필요. 동일이름의 파일이 시스템에 존재하지 않아야 함*/
 
-	struct superblock_t *superblock = (struct superblock_t *) malloc(sizeof(struct superblock_t));
 	struct inode_t *tmp = (struct inode_t *) malloc(sizeof(struct inode_t));
 	int ninode;
 
@@ -33,41 +21,19 @@ int ssufs_create(char *filename){
 	if (strlen(filename) > MAX_NAME_STRLEN) {
 		return -1;
 	}
-	ssufs_readSuperBlock(superblock);
-
-	for (int i = 0; i < NUM_INODES; i++)
-		if (superblock->inode_freelist[i] == INODE_IN_USE)
-		{
-			ssufs_readInode(i, tmp);
-			if (strcmp(tmp->name, filename) == 0)
-			{
-				free(tmp);
-				return -1;		//이미 있는 filename인 경우 실패
-			}
-		}
-	ninode = -1;
-	for(int i=0; i<NUM_INODES; i++)
-		if(superblock->inode_freelist[i] == INODE_FREE)
-		{
-			superblock->inode_freelist[i] = INODE_IN_USE;
-			ssufs_writeSuperBlock(superblock);
-			free(superblock);
-			ninode=i;
-			break;
-		}
+	if(open_namei(filename)>=0) return -1;	//이미 같은이름의 파일이 존재함
+	ninode = ssufs_allocInode();
 	if(ninode < 0) return -1;	//비어있는 inode 블럭이 없음!
 
 	///액션: inode 초기화
 	ssufs_readInode(ninode,tmp);
 
 	strncpy(tmp->name,filename,strlen(filename));
-	tmp->status=0;
+	tmp->status=INODE_IN_USE;
 	tmp->file_size=0;
 	for(int i=0;i<MAX_FILE_SIZE;i++)
-		tmp->direct_blocks[i]=NULL;
-
-	///뒷처리
-	free(superblock);
+		tmp->direct_blocks[i]=-1;
+	ssufs_writeInode(ninode,tmp);
 	return ninode;
 }
 
@@ -75,17 +41,15 @@ void ssufs_delete(char *filename){
 	/*2 MEMO: filname 삭제, inode와 같은 관련 리소스 해제. close 안해도 삭제 가능 */
 	//THINK: 데이터블록 freelist를 지우긴 함
 	int inode=open_namei(filename);
-	if(inode<0) return -1;	//filename인 파일이 없음
+	if(inode<0) return;	//filename인 파일이 없음
 
-	struct superblock_t *superblock = (struct superblock_t *) malloc(sizeof(struct superblock_t));
 	struct inode_t *tmp = (struct inode_t *) malloc(sizeof(struct inode_t));
-	ssufs_readSuperBlock(superblock);
 	ssufs_readInode(inode, tmp);
 	for (int i=0;i<MAX_FILE_SIZE;i++)
-		if(tmp->direct_blocks[i]) ssufs_freeDataBlock(tmp->direct_blocks[i]);
+		if(tmp->direct_blocks[i]>0) {  ssufs_freeDataBlock(tmp->direct_blocks[i]);}
+
 	ssufs_freeInode(inode);
-	ssufs_writeSuperBlock(superblock);
-	free(superblock);	free(tmp);
+	free(tmp);
 }
 
 int ssufs_open(char *filename){
@@ -98,13 +62,14 @@ int ssufs_open(char *filename){
 
 	file_handle_array[nfd].inode_number=inode;
 	file_handle_array[nfd].offset=0;
+	return nfd;
 }
 
 void ssufs_close(int file_handle){
 	file_handle_array[file_handle].inode_number = -1;
 	file_handle_array[file_handle].offset = 0;
 }
-//한블럭은 64바이트:
+
 int ssufs_read(int file_handle, char *buf, int nbytes){
 	/*4 MEMO: 4 
 	! open()된 파일의 현재 오프셋에서 요청된 buf로 요청된 nbytes수를 읽음
@@ -153,35 +118,62 @@ int ssufs_write(int file_handle, char *buf, int nbytes){
 	*/
 	struct inode_t *tmp = (struct inode_t *) malloc(sizeof(struct inode_t));
 	char bbuf[BLOCKSIZE]="",obuf[BLOCKSIZE];
+	int newblk[MAX_FILE_SIZE]={-1,-1,-1,-1},blkcnt=0;
 	ssufs_readInode(file_handle_array[file_handle].inode_number, tmp);
 	int soffset=file_handle_array[file_handle].offset,eoffset=soffset+nbytes,coffset=soffset;
 	//TODO: 바이트 수 체크, 필요 블럭 체크.
 	//		쓰기 실패시 모든 블럭 해제
 	//		오프셋이 블럭 중간일 수도 있음.
+	printf("write %d bytes at %d offset -> buf: %s\n",nbytes,soffset,buf);
 	int blkoffset,byteoffset,bufoffset=0;
 	if(eoffset>=MAX_FILE_SIZE*BLOCKSIZE) {free(tmp);	return -1;}	//최대파일크기제한 초과
-	if(((eoffset+BLOCKSIZE/2)/BLOCKSIZE-(tmp->file_size+BLOCKSIZE/2)/BLOCKSIZE) > ssufs_cntfreeDataBlock())
-		{free(tmp);	return -1;}	//블럭 체크:: 필요한 블럭 > 남은블럭 인 경우 쓰기 안함
+	//필요한 블럭 미리 ALLOC 시도하고 실패한 경우 해제후 RETURN
+	blkcnt=(eoffset+BLOCKSIZE/2)/BLOCKSIZE-(tmp->file_size+BLOCKSIZE/2)/BLOCKSIZE;	//새 할당이 필요한 블럭	
+	printf("allocating %d blocks\n",blkcnt);
+	for(int i=0;i<blkcnt;i++)
+		newblk[i]=ssufs_allocDataBlock();
+	for(int i=0;i<blkcnt;i++)
+		printf("allocated block #%d/%d : %d\n",i+1,blkcnt,newblk[i]);
+	if(blkcnt && newblk[blkcnt-1]<0)	//필요한 블럭중 마지막으로 할당한 블럭
+	{
+		printf("FAILED\n");
+		for(int i=0;i<blkcnt;i++)
+			if(newblk[i]>=0)ssufs_freeDataBlock(newblk[i]);
+		return -1;
+	}
+	else if(blkcnt) //새로 할당한 블럭을 inode에 연결
+	{
+		blkoffset=tmp->direct_blocks[soffset/BLOCKSIZE];	//오프셋이 있는 블럭
+		for (int i=0;i<blkcnt;i++)
+			tmp->direct_blocks[blkoffset+i+1]=newblk[i];
+		if(blkoffset<0) //첫 블럭도 새 블럭이다면?
+			blkoffset=tmp->direct_blocks[soffset/BLOCKSIZE];
+	}
+	
+	ssufs_writeInode(file_handle_array[file_handle].inode_number, tmp);	//블럭 할당상황 갱신
 
-	blkoffset=tmp->direct_blocks[soffset/BLOCKSIZE];	//오프셋이 있는 블럭
-
-	ssufs_readDataBlock(blkoffset,obuf);
-	for(byteoffset=0;byteoffset<soffset%BLOCKSIZE;byteoffset++)
-		bbuf[byteoffset]=obuf[byteoffset];		//오프셋 전까지 원본 블럭 복사
-	for(byteoffset=soffset%BLOCKSIZE;byteoffset<BLOCKSIZE && coffset<eoffset;byteoffset++)
-		bbuf[byteoffset]=buf[bufoffset++];	coffset++;		//내용을 블럭에 복사
-	ssufs_writeDataBlock(blkoffset,bbuf);
-	while(coffset<eoffset)	//첫블럭 이후
+	printf("start write offset [%d , %d)\n",soffset,eoffset);
+	if(soffset%BLOCKSIZE)	//첫 블럭이 중간에서 쓰기를 시작하는 경우
+	{
+		ssufs_readDataBlock(blkoffset,obuf);
+		for(byteoffset=0;byteoffset<soffset%BLOCKSIZE;byteoffset++)
+			bbuf[byteoffset]=obuf[byteoffset];		//오프셋 전까지 원본 블럭 복사
+		for(byteoffset=soffset%BLOCKSIZE;byteoffset<BLOCKSIZE && coffset<eoffset;byteoffset++)
+			bbuf[byteoffset]=buf[bufoffset++];	coffset++;		//내용을 블럭에 복사
+		ssufs_writeDataBlock(blkoffset,bbuf);
+	}
+	while(coffset<eoffset)
 	{
 		memset(bbuf,0,sizeof(bbuf));
-		if(tmp->direct_blocks[coffset/BLOCKSIZE] < 0)	{blkoffset=ssufs_allocDataBlock();	tmp->direct_blocks[coffset/BLOCKSIZE]=blkoffset;}	//새 블럭 할당
-		else blkoffset=tmp->direct_blocks[coffset/BLOCKSIZE];
+		blkoffset=tmp->direct_blocks[coffset/BLOCKSIZE];	printf("now write at block %d (%d)\n",blkoffset,coffset);
 		for(byteoffset=0;byteoffset<BLOCKSIZE && coffset<eoffset;byteoffset++)
-			bbuf[byteoffset]=buf[bufoffset++];	coffset++;		//내용을 블럭에 복사
+			{bbuf[byteoffset]=buf[bufoffset++];	coffset++;}		//내용을 블럭에 복사
 		ssufs_writeDataBlock(blkoffset,bbuf);
 	}
 
 	file_handle_array[file_handle].offset=coffset;
+	tmp->file_size=eoffset>tmp->file_size?eoffset:tmp->file_size;		//파일 크기 갱신
+	ssufs_writeInode(file_handle_array[file_handle].inode_number, tmp);
 	free(tmp);
 	return 0;
 }
