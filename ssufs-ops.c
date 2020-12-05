@@ -45,9 +45,8 @@ void ssufs_delete(char *filename){
 
 	struct inode_t *tmp = (struct inode_t *) malloc(sizeof(struct inode_t));
 	ssufs_readInode(inode, tmp);
-	for (int i=0;i<MAX_FILE_SIZE;i++)
-		if(tmp->direct_blocks[i]>0) {  ssufs_freeDataBlock(tmp->direct_blocks[i]);}
-
+	//for (int i=0;i<MAX_FILE_SIZE;i++)
+	//	if(tmp->direct_blocks[i]>=0) ssufs_freeDataBlock(tmp->direct_blocks[i]);
 	ssufs_freeInode(inode);
 	free(tmp);
 }
@@ -126,7 +125,7 @@ int ssufs_write(int file_handle, char *buf, int nbytes){
 	//		오프셋이 블럭 중간일 수도 있음.
 	printf("write %d bytes at %d offset -> buf: %s\n",nbytes,soffset,buf);
 	int blkoffset,byteoffset,bufoffset=0;
-	if(eoffset>=MAX_FILE_SIZE*BLOCKSIZE) {free(tmp);	return -1;}	//최대파일크기제한 초과
+	if(eoffset>MAX_FILE_SIZE*BLOCKSIZE) {free(tmp);	return -1;}	//최대파일크기제한 초과
 	//필요한 블럭 미리 ALLOC 시도하고 실패한 경우 해제후 RETURN
 	blkcnt=(eoffset+BLOCKSIZE/2)/BLOCKSIZE-(tmp->file_size+BLOCKSIZE/2)/BLOCKSIZE;	//새 할당이 필요한 블럭	
 	printf("allocating %d blocks\n",blkcnt);
@@ -159,7 +158,7 @@ int ssufs_write(int file_handle, char *buf, int nbytes){
 		for(byteoffset=0;byteoffset<soffset%BLOCKSIZE;byteoffset++)
 			bbuf[byteoffset]=obuf[byteoffset];		//오프셋 전까지 원본 블럭 복사
 		for(byteoffset=soffset%BLOCKSIZE;byteoffset<BLOCKSIZE && coffset<eoffset;byteoffset++)
-			bbuf[byteoffset]=buf[bufoffset++];	coffset++;		//내용을 블럭에 복사
+			{bbuf[byteoffset]=buf[bufoffset++];	coffset++;}		//내용을 블럭에 복사
 		ssufs_writeDataBlock(blkoffset,bbuf);
 	}
 	while(coffset<eoffset)
