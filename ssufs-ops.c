@@ -123,19 +123,27 @@ int ssufs_write(int file_handle, char *buf, int nbytes){
 	//TODO: 바이트 수 체크, 필요 블럭 체크.
 	//		쓰기 실패시 모든 블럭 해제
 	//		오프셋이 블럭 중간일 수도 있음.
+	#ifdef DEBUG
 	printf("write %d bytes at %d offset -> buf: %s\n",nbytes,soffset,buf);
+	#endif
 	int blkoffset,byteoffset,bufoffset=0;
 	if(eoffset>MAX_FILE_SIZE*BLOCKSIZE) {free(tmp);	return -1;}	//최대파일크기제한 초과
 	//필요한 블럭 미리 ALLOC 시도하고 실패한 경우 해제후 RETURN
 	blkcnt=(eoffset+BLOCKSIZE/2)/BLOCKSIZE-(tmp->file_size+BLOCKSIZE/2)/BLOCKSIZE;	//새 할당이 필요한 블럭	
+	#ifdef DEBUG
 	printf("allocating %d blocks\n",blkcnt);
+	#endif
 	for(int i=0;i<blkcnt;i++)
 		newblk[i]=ssufs_allocDataBlock();
+	#ifdef DEBUG
 	for(int i=0;i<blkcnt;i++)
 		printf("allocated block #%d/%d : %d\n",i+1,blkcnt,newblk[i]);
+	#endif
 	if(blkcnt && newblk[blkcnt-1]<0)	//필요한 블럭중 마지막으로 할당한 블럭
 	{
+	#ifdef DEBUG
 		printf("FAILED\n");
+	#endif
 		for(int i=0;i<blkcnt;i++)
 			if(newblk[i]>=0)ssufs_freeDataBlock(newblk[i]);
 		return -1;
@@ -150,8 +158,9 @@ int ssufs_write(int file_handle, char *buf, int nbytes){
 	}
 	
 	ssufs_writeInode(file_handle_array[file_handle].inode_number, tmp);	//블럭 할당상황 갱신
-
+	#ifdef DEBUG
 	printf("start write offset [%d , %d)\n",soffset,eoffset);
+	#endif
 	if(soffset%BLOCKSIZE)	//첫 블럭이 중간에서 쓰기를 시작하는 경우
 	{
 		ssufs_readDataBlock(blkoffset,obuf);
@@ -164,7 +173,10 @@ int ssufs_write(int file_handle, char *buf, int nbytes){
 	while(coffset<eoffset)
 	{
 		memset(bbuf,0,sizeof(bbuf));
-		blkoffset=tmp->direct_blocks[coffset/BLOCKSIZE];	printf("now write at block %d (%d)\n",blkoffset,coffset);
+		blkoffset=tmp->direct_blocks[coffset/BLOCKSIZE];
+		#ifdef DEBUG
+		printf("now write at block %d (%d)\n",blkoffset,coffset);
+		#endif
 		for(byteoffset=0;byteoffset<BLOCKSIZE && coffset<eoffset;byteoffset++)
 			{bbuf[byteoffset]=buf[bufoffset++];	coffset++;}		//내용을 블럭에 복사
 		ssufs_writeDataBlock(blkoffset,bbuf);
